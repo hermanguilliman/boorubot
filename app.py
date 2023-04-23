@@ -6,7 +6,7 @@ from database import (
     upsert_subscription,
     log_posts_to_database,
     add_subscription,
-    get_all_subscriptions
+    get_subscriptions_list
     )
 
 danbooru = Danbooru('danbooru')
@@ -17,7 +17,7 @@ init_database(db)
 add_subscription(db=db, tags='ishikei')
 add_subscription(db=db, tags="ishikoro_1450")
 add_subscription(db=db, tags="porqueloin")
-get_all_subscriptions(db)
+print(get_subscriptions_list(db))
 
 def get_posts_list() -> list|None:    
     try:

@@ -9,8 +9,10 @@ def init_database(db:Connection):
     db.commit()
 
 
-def get_all_subscriptions(db:Connection):
+def get_subscriptions_list(db:Connection)-> list:
+    # Получение всех подписок
     tags = db.execute("SELECT DISTINCT tags FROM subscriptions;").fetchall()
+    tags = ["".join(tag) for tag in tags]
     return tags
     
 
