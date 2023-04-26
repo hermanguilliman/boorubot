@@ -6,13 +6,14 @@ from pybooru import Danbooru
 import sqlite3
 from repo import Repo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from environs import load_dotenv
 from loguru import logger
+from environs import load_dotenv
+
 load_dotenv()
 
 
 bot_token: str = os.getenv('BOT')
-admin_id: int = os.getenv('ADMIN')
+admin_id: int = int(os.getenv('ADMIN'))
 
 
 if not bot_token:
@@ -43,6 +44,8 @@ def get_new_posts_by_tags(tags:str=None) -> list|None:
 
 @dp.message(Command('start'))
 async def start(message: types.Message):
+    if message.from_user.id != admin_id:
+        return
     await message.answer("Привет, я booru бот!")
     await asyncio.sleep(.7)
     await message.answer(
@@ -54,8 +57,11 @@ async def start(message: types.Message):
     )
 
 
+
 @dp.message(Command('add'))
 async def start(message: types.Message, command: CommandObject):
+    if message.from_user.id != admin_id:
+        return
     if command.args:
         if repo.add_subscription(command.args):
             await message.answer(f'<b>✅ {command.args} - подписка добавлена!</b>')
@@ -67,6 +73,8 @@ async def start(message: types.Message, command: CommandObject):
 
 @dp.message(Command('subs'))
 async def show_subs(message: types.Message):
+    if message.from_user.id != admin_id:
+        return
     subs = repo.get_subscriptions_list()
     if subs:
         await message.answer(f'<b>Активных подписок: {len(subs)}</b>')
@@ -78,12 +86,14 @@ async def show_subs(message: types.Message):
 
 @dp.message(Command('del'))
 async def delete_sub(message: types.Message, command: CommandObject):
+    if message.from_user.id != admin_id:
+        return
     if command.args:
         repo.delete_sub(command.args)
         await message.answer(f'✅ <b>{command.args} -  удалено из подписок</b>')
 
 
-async def check_new_posts(bot:Bot):
+async def check_new_posts(bot: Bot):
     '''
     Получаем список подписок, проверяем обновления для каждого элемента и отправляем новые посты в чат
     '''
@@ -96,19 +106,28 @@ async def check_new_posts(bot:Bot):
             posts = get_new_posts_by_tags(sub)
             if posts:
                 for post in posts:
-                    new_posts.append(post)
+                    # Проверяем, есть ли сообщение в базе данных
+                    if not repo.is_post_exists(post):
+                        new_posts.append(post)
+                        # добавляем сообщение в базу данных
+                        repo.add_post(post)
 
     if len(new_posts) > 0:
+        # отправляем все новые сообщения в одном сообщении
+        media_group = []
         for post in new_posts:
-            if post:
-                _, ext = os.path.splitext(post)
-                if ext.lower() in ('.jpg', '.jpeg', '.png'):
-                    await bot.send_photo(chat_id=admin_id, photo=post)
-                elif ext.lower() in ('.mp4', '.webm'):
-                    await bot.send_video(chat_id=admin_id, video=post)
-                elif ext.lower() == '.gif':
-                    await bot.send_animation(chat_id=admin_id, animation=post)
-                await asyncio.sleep(1)
+            _, ext = os.path.splitext(post)
+            if ext.lower() in ('.jpg', '.jpeg', '.png'):
+                photo = types.InputMediaPhoto(media=post)
+                media_group.append(photo)
+            elif ext.lower() in ('.mp4', '.webm'):
+                video = types.InputMediaVideo(media=post)
+                media_group.append(video)
+            elif ext.lower() == '.gif':
+                gif = types.InputMediaAnimation(media=post)
+                media_group.append(gif)
+
+        await bot.send_media_group(chat_id=admin_id, media=media_group)
     else:
         logger.info('Новые сообщения не найдены')
 
