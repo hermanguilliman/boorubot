@@ -93,7 +93,7 @@ async def delete_sub(message: types.Message, command: CommandObject):
         await message.answer(f'✅ <b>{command.args} -  удалено из подписок</b>')
 
 
-async def check_new_posts(bot: Bot):
+async def check_new_posts(bot:Bot):
     '''
     Получаем список подписок, проверяем обновления для каждого элемента и отправляем новые посты в чат
     '''
@@ -106,28 +106,19 @@ async def check_new_posts(bot: Bot):
             posts = get_new_posts_by_tags(sub)
             if posts:
                 for post in posts:
-                    # Проверяем, есть ли сообщение в базе данных
-                    if not repo.is_post_exists(post):
-                        new_posts.append(post)
-                        # добавляем сообщение в базу данных
-                        repo.add_post(post)
+                    new_posts.append(post)
 
     if len(new_posts) > 0:
-        # отправляем все новые сообщения в одном сообщении
-        media_group = []
         for post in new_posts:
-            _, ext = os.path.splitext(post)
-            if ext.lower() in ('.jpg', '.jpeg', '.png'):
-                photo = types.InputMediaPhoto(media=post)
-                media_group.append(photo)
-            elif ext.lower() in ('.mp4', '.webm'):
-                video = types.InputMediaVideo(media=post)
-                media_group.append(video)
-            elif ext.lower() == '.gif':
-                gif = types.InputMediaAnimation(media=post)
-                media_group.append(gif)
-
-        await bot.send_media_group(chat_id=admin_id, media=media_group)
+            if post:
+                _, ext = os.path.splitext(post)
+                if ext.lower() in ('.jpg', '.jpeg', '.png'):
+                    await bot.send_photo(chat_id=admin_id, photo=post)
+                elif ext.lower() in ('.mp4', '.webm'):
+                    await bot.send_video(chat_id=admin_id, video=post)
+                elif ext.lower() == '.gif':
+                    await bot.send_animation(chat_id=admin_id, animation=post)
+                await asyncio.sleep(1)
     else:
         logger.info('Новые сообщения не найдены')
 
