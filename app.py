@@ -2,16 +2,16 @@ import asyncio
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command, CommandObject
-from pybooru import Danbooru, PybooruError
+from pybooru import Danbooru
 import sqlite3
-from loguru import logger
 from repo import Repo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from environs import load_dotenv
-
+from loguru import logger
 load_dotenv()
 
-bot_token: str = os.getenv('BOT_TOKEN')
+
+bot_token: str = os.getenv('BOT')
 admin_id: int = os.getenv('ADMIN')
 
 
@@ -19,9 +19,7 @@ if not bot_token:
     logger.error('Не найден токен телеграм бота!')
     exit()
 
-# Объект бота
 bot = Bot(token=bot_token, parse_mode='HTML')
-# Диспетчер
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
@@ -68,10 +66,11 @@ async def start(message: types.Message, command: CommandObject):
 
 
 @dp.message(Command('subs'))
-async def show_subs(message: types.Message, command: CommandObject):
+async def show_subs(message: types.Message):
     subs = repo.get_subscriptions_list()
     if subs:
         await message.answer(f'<b>Активных подписок: {len(subs)}</b>')
+        await asyncio.sleep(1)
         await message.answer('\n'.join(subs))
     else:
         await message.answer('<b>Подписки не найдены</b>')
@@ -88,6 +87,7 @@ async def check_new_posts(bot:Bot):
     '''
     Получаем список подписок, проверяем обновления для каждого элемента и отправляем новые посты в чат
     '''
+    logger.info('Проверка новых сообщений')
     subs = repo.get_subscriptions_list()
     new_posts = []
 
@@ -110,7 +110,7 @@ async def check_new_posts(bot:Bot):
                     await bot.send_animation(chat_id=admin_id, animation=post)
                 await asyncio.sleep(1)
     else:
-        await bot.send_message(chat_id=admin_id, text='🤷 <b>Новые сообщения не найдены</b>')
+        logger.info('Новые сообщения не найдены')
 
 
 async def main():

@@ -24,9 +24,10 @@ class Repo:
         try:            
             self.db.execute("INSERT INTO subscriptions (tags) VALUES (?);", (tags,))
             self.db.commit()
+            logger.info(f'{tags} - добавлено в подписки')
             return True
         except:
-            logger.debug('Ошибка добавления записи')
+            logger.debug(f'Ошибка добавления записи {tags}')
             return False
 
 
@@ -54,6 +55,7 @@ class Repo:
                     new_posts.append(post.get('file_url'))
                     self.db.execute('INSERT INTO posts (id) VALUES (?)', (post['id'],))
                 self.db.commit()
+            logger.info(f'Получено {len(new_posts)} новых постов')
             return new_posts
         else:
             return None
@@ -61,5 +63,5 @@ class Repo:
     def delete_sub(self, tags:str) -> bool:
         # Удаляет запись
         self.db.execute("DELETE FROM subscriptions WHERE tags = ?;", [tags])
-        logger.info
         self.db.commit()
+        logger.info(f'{tags} -  удалено')
