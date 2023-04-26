@@ -3,6 +3,8 @@ services:
   bot:
     build:
       context: .
+    env_file:
+      - .env
     volumes:
       - ./database:/app/database
     command: ["python", "app.py"]
