@@ -62,6 +62,12 @@ class Repo:
 
     def delete_sub(self, tags:str) -> bool:
         # Удаляет запись
-        self.db.execute("DELETE FROM subscriptions WHERE tags = ?;", [tags])
-        self.db.commit()
-        logger.info(f'{tags} -  удалено')
+        result = self.db.execute('SELECT * FROM subscriptions WHERE tags = ?', [tags]).fetchone()
+        if result:
+            self.db.execute("DELETE FROM subscriptions WHERE tags = ?;", [tags])
+            self.db.commit()
+            logger.info(f'{tags} -  удалено')
+            return True
+        else:
+            logger.warning(f'{tags} - не найдено')
+            return False
