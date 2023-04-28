@@ -76,7 +76,7 @@ async def show_subs(message: types.Message):
     if message.from_user.id != admin_id:
         return
     subs = repo.get_subscriptions_list()
-    if subs:
+    if len(subs) > 0:
         await message.answer(f'<b>Активных подписок: {len(subs)}</b>')
         await asyncio.sleep(1)
         await message.answer('\n'.join(subs))
@@ -89,8 +89,12 @@ async def delete_sub(message: types.Message, command: CommandObject):
     if message.from_user.id != admin_id:
         return
     if command.args:
-        repo.delete_sub(command.args)
-        await message.answer(f'✅ <b>{command.args} -  удалено из подписок</b>')
+        await message.answer(f'Удаляю {command.args}...')
+        await asyncio.sleep(1)
+        if repo.delete_sub(command.args):
+            await message.answer(f'✅ <b>{command.args} -  удалено из подписок</b>')
+        else:
+            await message.answer(f'<b>❌ Не получилось удалить {command.args}</b>')
 
 
 async def check_new_posts(bot:Bot):
