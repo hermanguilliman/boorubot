@@ -37,9 +37,9 @@ def get_new_posts_by_tags(tags:str=None) -> list|None:
     if tags is None:
         return None
 
-    posts = danbooru.post_list(tags=tags, limit=10)
-    posts = repo.filter_new_posts(posts=posts)
-    return posts
+    last_posts = danbooru.post_list(tags=tags, limit=10)
+    new_posts = repo.filter_new_posts(posts=last_posts)
+    return new_posts
 
 
 @dp.message(Command('start'))
@@ -65,6 +65,7 @@ async def start(message: types.Message, command: CommandObject):
     if command.args:
         if repo.add_subscription(command.args):
             await message.answer(f'<b>✅ {command.args} - подписка добавлена!</b>')
+            await check_new_posts(bot=bot)
         else:
             await message.answer(f'<b>❌ Не получилось добавить {command.args} в базу ❌</b>')
     else:
@@ -106,22 +107,24 @@ async def check_new_posts(bot:Bot):
     new_posts = []
 
     if subs:
+        # Получаем новые посты по каждому набору тэгов
         for sub in subs:
             posts = get_new_posts_by_tags(sub)
             if posts:
-                for post in posts:
-                    new_posts.append(post)
+                    for post in posts:
+                        new_posts.append(post)
 
     if len(new_posts) > 0:
+        # Если есть список новых постов
+
         for post in new_posts:
-            if post:
-                _, ext = os.path.splitext(post)
-                if ext.lower() in ('.jpg', '.jpeg', '.png'):
-                    await bot.send_photo(chat_id=admin_id, photo=post)
-                elif ext.lower() in ('.mp4', '.webm'):
-                    await bot.send_video(chat_id=admin_id, video=post)
-                elif ext.lower() == '.gif':
-                    await bot.send_animation(chat_id=admin_id, animation=post)
+            if 'file_url' in post:
+                if post['file_ext'] in ('jpg', 'jpeg', 'png'):
+                    await bot.send_photo(chat_id=admin_id, photo=post['file_url'], caption=post['tag_string'])
+                elif post['file_ext'] in ('mp4', 'webm'):
+                    await bot.send_video(chat_id=admin_id, video=post['file_url'], caption=post['tag_string'])
+                elif post['file_ext'] == 'gif':
+                    await bot.send_animation(chat_id=admin_id, animation=post['file_url'], caption=post['tag_string'])
                 await asyncio.sleep(1)
     else:
         logger.info('Новые сообщения не найдены')
