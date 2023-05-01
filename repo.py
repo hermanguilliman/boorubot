@@ -52,9 +52,9 @@ class Repo:
             new_posts = []
             for post in posts:
                 if self.db.execute('SELECT id FROM posts WHERE id = ?', (post['id'],)).fetchone() is None:
-                    new_posts.append(post.get('file_url'))
+                    new_posts.append(post)
                     self.db.execute('INSERT INTO posts (id) VALUES (?)', (post['id'],))
-                self.db.commit()
+                    self.db.commit()
             logger.info(f'Получено {len(new_posts)} новых постов')
             return new_posts
         else:
