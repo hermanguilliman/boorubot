@@ -119,12 +119,15 @@ async def check_new_posts(bot:Bot):
 
         for post in new_posts:
             if 'file_url' in post:
-                if post['file_ext'] in ('jpg', 'jpeg', 'png'):
-                    await bot.send_photo(chat_id=admin_id, photo=post['file_url'], caption=post['tag_string'])
+                caption = f"<b>artist:</b> {post['tag_string_artist']}\n<b>tags:</b> {post['tag_string_general']}" 
+                if post['file_ext'] in ('jpg', 'jpeg', 'png', 'webp'):
+                    await bot.send_photo(chat_id=admin_id, photo=post['file_url'], caption=caption, parse_mode='HTML')
                 elif post['file_ext'] in ('mp4', 'webm'):
-                    await bot.send_video(chat_id=admin_id, video=post['file_url'], caption=post['tag_string'])
+                    await bot.send_video(chat_id=admin_id, video=post['file_url'], caption=caption, parse_mode='HTML')
                 elif post['file_ext'] == 'gif':
-                    await bot.send_animation(chat_id=admin_id, animation=post['file_url'], caption=post['tag_string'])
+                    await bot.send_animation(chat_id=admin_id, animation=post['file_url'], caption=caption, parse_mode='HTML')
+                else:
+                    logger.debug(f"Не знаю что делать с форматом {post['file_ext']}")
                 await asyncio.sleep(1)
     else:
         logger.info('Новые сообщения не найдены')
