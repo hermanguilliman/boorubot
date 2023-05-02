@@ -80,7 +80,7 @@ async def show_subs(message: types.Message):
     if len(subs) > 0:
         await message.answer(f'<b>Активных подписок: {len(subs)}</b>')
         await asyncio.sleep(1)
-        await message.answer('\n'.join(subs))
+        await message.answer(', '.join(subs))
     else:
         await message.answer('<b>Подписки не найдены</b>')
 
