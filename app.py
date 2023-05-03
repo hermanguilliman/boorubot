@@ -96,6 +96,8 @@ async def delete_sub(message: types.Message, command: CommandObject):
             await message.answer(f'✅ <b>{command.args} -  удалено из подписок</b>')
         else:
             await message.answer(f'<b>❌ Не получилось удалить {command.args}</b>')
+    else:
+        await message.answer('Используйте <b>/del tag</b> чтобы удалить подписку')
 
 
 async def check_new_posts(bot:Bot):
