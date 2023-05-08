@@ -121,7 +121,9 @@ async def check_new_posts(bot:Bot):
 
         for post in new_posts:
             if 'file_url' in post:
-                caption = f"<b>artist:</b> {post['tag_string_artist']}\n<b>tags:</b> {post['tag_string_general']}" 
+                caption = f"<b>Автор:</b> {post['tag_string_artist']}\
+                    \n<b>Персонаж:</b> {post['tag_string_character']}\
+                    \n<b>Теги:</b> {post['tag_string_general']}" 
                 if post['file_ext'] in ('jpg', 'jpeg', 'png', 'webp'):
                     await bot.send_photo(chat_id=admin_id, photo=post['file_url'], caption=caption, parse_mode='HTML')
                 elif post['file_ext'] in ('mp4', 'webm'):
