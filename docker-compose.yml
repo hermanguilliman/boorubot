@@ -7,4 +7,4 @@ services:
       - .env
     volumes:
       - ./database:/app/database
-    command: ["python", "app.py"]
+    command: ["python", "bot.py"]
