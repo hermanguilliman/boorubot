@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "danboorubot"
+version = "0.1.0"
+description = ""
+authors = ["Herman Guilliman <glmn.dev@protonmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+python-dotenv = "^1.0.0"
+loguru = "^0.7.2"
+apscheduler = "^3.10.4"
+pybooru = "^4.2.2"
+aiogram = "^3.1.1"
+aiogram-dialog = "^2.0.0"
+sqlalchemy = "^2.0.22"
+aiosqlite = "^0.19.0"
+environs = "^9.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

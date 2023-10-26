@@ -1,11 +1,10 @@
-FROM python:3.11-slim-buster
+FROM python:3.11-alpine
 
 WORKDIR /app
-
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["python", "app.py"]
+COPY poetry.lock pyproject.toml /app/
+RUN pip install --upgrade pip
+RUN pip install poetry
+RUN poetry config virtualenvs.create false \
+  && poetry install --no-interaction --no-ansi
+COPY . /app
+CMD ["python", "bot.py"]
