@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sqlite3
+import sys
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command, CommandObject
@@ -65,9 +66,11 @@ async def add_sub(message: types.Message, command: CommandObject):
         return
     if command.args:
         if repo.add_subscription(command.args):
+            logger.info(f'{command.args} добавлен в подписки')
             await message.answer(f"<b>✅ {command.args} - подписка добавлена!</b>")
             await check_new_posts(bot=bot)
         else:
+            logger.info(f'{command.args} не добавлен в подписки')
             await message.answer(
                 f"<b>❌ Не получилось добавить {command.args} в базу ❌</b>"
             )
@@ -85,6 +88,7 @@ async def show_subs(message: types.Message):
         await asyncio.sleep(1)
         await message.answer(", ".join(subs))
     else:
+        logger.info("Подписки не найдены")
         await message.answer("<b>Подписки не найдены</b>")
 
 
@@ -96,8 +100,10 @@ async def delete_sub(message: types.Message, command: CommandObject):
         await message.answer(f"Удаляю {command.args}...")
         await asyncio.sleep(1)
         if repo.delete_sub(command.args):
+            logger.info(f"{command.args} -  удалено из подписок")
             await message.answer(f"✅ <b>{command.args} -  удалено из подписок</b>")
         else:
+            logger.info(f"Не получилось удалить {command.args}")
             await message.answer(f"<b>❌ Не получилось удалить {command.args}</b>")
     else:
         await message.answer("Используйте <b>/del tag</b> чтобы удалить подписку")
@@ -155,9 +161,22 @@ async def check_new_posts(bot: Bot):
         logger.info("Новые сообщения не найдены")
 
 
+def logger_setup():
+    logger.remove()
+    logger.add("logs/bot.log", level="DEBUG", rotation="10 MB")
+    logger.add(
+        sys.stdout,
+        colorize=True,
+        format="<green>{time}</green> <level>{message}</level>",
+        level="DEBUG",
+    )
+
+
 async def main():
+    logger_setup()
     scheduler.add_job(check_new_posts, "interval", hours=1, args=(bot,))
     scheduler.start()
+    logger.debug('Бот запущен')
     await dp.start_polling(bot)
 
 
