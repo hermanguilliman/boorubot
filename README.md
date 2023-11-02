@@ -3,16 +3,19 @@
 Клонируйте репозиторий
 
 ```bash
-git clone git@github.com:hermanguilliman/boorubot.git
+git clone https://github.com/hermanguilliman/boorubot.git
 ```
 
-Соберите образ
+Переименуйте .env.example в .env и заполните поля ADMIN id админа и BOT токеном бота
+
+Соберите образ с помощью docker-compose
 
 ```bash
-docker build -t boorubot .
+docker-compose build
 ```
 
-Запустите контейнер
+Запустите
 
 ```bash
-docker run -d --restart always -e ADMIN=123456 -e BOT=123456 boorubot
+docker-compose up -d
+```
