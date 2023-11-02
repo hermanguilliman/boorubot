@@ -67,7 +67,7 @@ async def main():
     scheduler.add_job(
         check_new_posts,
         "interval",
-        minutes=1,
+        hours=1,
         args=(bot, sessionmaker, danbooru, admin_id),
     )
     scheduler.start()
