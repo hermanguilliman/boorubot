@@ -7,7 +7,7 @@ from app.services.repo import Repo
 
 
 async def show_subs(message: Message, repo: Repo):
-    subs = repo.get_subscriptions_list()
+    subs = await repo.get_subscriptions_list()
     if len(subs) > 0:
         await message.answer(f"<b>Активных подписок: {len(subs)}</b>")
         await sleep(0.5)

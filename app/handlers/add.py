@@ -7,7 +7,7 @@ from app.services.repo import Repo
 
 async def add_sub(message: Message, command: CommandObject, repo: Repo):
     if command.args:
-        if repo.add_subscription(command.args):
+        if await repo.add_subscription(command.args):
             logger.info(f"{command.args} добавлен в подписки")
             await message.answer(f"<b>✅ {command.args} - подписка добавлена!</b>")
         else:

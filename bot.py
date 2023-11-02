@@ -1,12 +1,14 @@
 import asyncio
 import os
-import sqlite3
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters.command import Command
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from environs import load_dotenv
 from loguru import logger
+from pybooru import Danbooru
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.commands import set_default_commands
 from app.config import logger_setup
@@ -21,10 +23,16 @@ from app.services.danbooru import check_new_posts
 load_dotenv()
 
 
-async def create_schema(conn: sqlite3.Connection):
-    with open("database/init.sql") as f:
-        script = f.read()
-        conn.executescript(script)
+async def create_schema(async_sessionmaker: async_sessionmaker[AsyncSession]):
+    async with async_sessionmaker() as session:
+        async with session.begin():
+            try:
+                with open("database/init.sql") as file:
+                    lines = file.readlines()
+                    for line in lines:
+                        await session.execute(text(line))
+            except Exception as e:
+                logger.error(e)
 
 
 async def main():
@@ -38,21 +46,30 @@ async def main():
         logger.error("Не найден id администратора!")
         exit()
 
+    url = "sqlite+aiosqlite:///database/db.sqlite"
+    engine = create_async_engine(url, echo=False, future=True)
+    sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
     bot = Bot(token=bot_token, parse_mode="HTML")
     dp = Dispatcher()
+    danbooru = Danbooru("danbooru")
     scheduler = AsyncIOScheduler()
-    conn = sqlite3.connect("database/db.sqlite")
-    await create_schema(conn)
+    await create_schema(sessionmaker)
     await set_default_commands(bot)
     dp.message.register(start, Command("start"), AdminFilter(admin_id))
     dp.message.register(add_sub, Command("add"), AdminFilter(admin_id))
     dp.message.register(delete_sub, Command("del"), AdminFilter(admin_id))
     dp.message.register(show_subs, Command("subs"), AdminFilter(admin_id))
-    dp.message.middleware(DatabaseMiddleware(conn))
+    dp.message.middleware(DatabaseMiddleware(sessionmaker))
 
     logger_setup()
 
-    scheduler.add_job(check_new_posts, "interval", hours=1, args=(bot, conn, admin_id))
+    scheduler.add_job(
+        check_new_posts,
+        "interval",
+        minutes=1,
+        args=(bot, sessionmaker, danbooru, admin_id),
+    )
     scheduler.start()
 
     logger.debug("Бот запущен")

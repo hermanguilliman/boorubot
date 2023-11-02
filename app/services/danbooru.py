@@ -1,16 +1,14 @@
 from asyncio import sleep
-from sqlite3 import Connection
 
 from aiogram import Bot
 from loguru import logger
 from pybooru import Danbooru
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.services.repo import Repo
 
-danbooru = Danbooru("danbooru")
 
-
-def get_new_posts_by_tags(repo: Repo, tags: str = None) -> list | None:
+async def get_new_posts_by_tags(danbooru, repo: Repo, tags: str = None) -> list | None:
     """
     Принимает тэги и возвращает список постов
     """
@@ -18,25 +16,38 @@ def get_new_posts_by_tags(repo: Repo, tags: str = None) -> list | None:
         return None
 
     last_posts = danbooru.post_list(tags=tags, limit=10)
-    new_posts = repo.filter_new_posts(posts=last_posts)
+    new_posts = await repo.filter_new_posts(posts=last_posts)
     return new_posts
 
 
-async def check_new_posts(bot: Bot, conn: Connection, admin_id: int):
+async def create_session(async_sessionmaker: async_sessionmaker[AsyncSession]):
+    async with async_sessionmaker() as session:
+        async with session.begin():
+            return session
+
+
+async def check_new_posts(
+    bot: Bot,
+    async_sessionmaker: async_sessionmaker[AsyncSession],
+    danbooru: Danbooru,
+    admin_id: int,
+):
     """
     Получаем список подписок, проверяем обновления для каждого элемента
     и отправляем новые посты в чат
     """
-    repo = Repo(conn)
+
+    session = await create_session(async_sessionmaker)
+    repo = Repo(session)
     logger.info("Проверка новых сообщений")
-    subscriptions = repo.get_subscriptions_list()
+    subscriptions = await repo.get_subscriptions_list()
     new_posts = []
-    
+
     try:
         if subscriptions:
             # Получаем новые посты по каждому набору тэгов
             for sub in subscriptions:
-                posts = get_new_posts_by_tags(repo, sub)
+                posts = await get_new_posts_by_tags(danbooru, repo, sub)
                 if posts:
                     for post in posts:
                         new_posts.append(post)
@@ -71,9 +82,11 @@ async def check_new_posts(bot: Bot, conn: Connection, admin_id: int):
                             parse_mode="HTML",
                         )
                     else:
-                        logger.debug(f"Не знаю что делать с форматом {post['file_ext']}")
+                        logger.debug(
+                            f"Не знаю что делать с форматом {post['file_ext']}"
+                        )
                     await sleep(1)
         else:
             logger.info("Новые сообщения не найдены")
     except Exception as e:
-        await bot.send_message(admin_id, f'Возникла ошибка: \n {e}')
+        await bot.send_message(admin_id, f"Возникла ошибка: \n {e}")

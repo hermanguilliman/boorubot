@@ -9,7 +9,7 @@ async def delete_sub(message: Message, command: CommandObject, repo: Repo):
     if command.args:
         await message.answer(f"Удаляю {command.args}...")
         await sleep(.5)
-        if repo.delete_sub(command.args):
+        if await repo.delete_sub(command.args):
             logger.info(f"{command.args} -  удалено из подписок")
             await message.answer(f"✅ <b>{command.args} -  удалено из подписок</b>")
         else:
