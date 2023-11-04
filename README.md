@@ -1,5 +1,7 @@
 # Бот для отслеживания обновлений по тэгам Danbooru
 
+[![Интерфейс boorubot](https://i.ibb.co/XCcWPL8/main.png 'Boorubot')](https://i.ibb.co/XCcWPL8/main.png)
+
 Клонируйте репозиторий
 
 ```bash
