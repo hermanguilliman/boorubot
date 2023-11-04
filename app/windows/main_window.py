@@ -1,6 +1,6 @@
 from aiogram.enums import ParseMode
-from aiogram_dialog import Window
-from aiogram_dialog.widgets.kbd import Row, SwitchTo
+from aiogram_dialog import StartMode, Window
+from aiogram_dialog.widgets.kbd import Row, Start, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 
 from app.getters.main_window import main_window_getter
@@ -16,6 +16,14 @@ main_window = Window(
     Row(
         SwitchTo(Const("🍏 Добавить"), id="add", state=DanMenu.add),
         SwitchTo(Const("🍎 Удалить"), id="delete", state=DanMenu.delete),
+    ),
+    Row(
+        Start(
+            Const("♻️ Обновить окно"),
+            id="restart",
+            state=DanMenu.main,
+            mode=StartMode.NORMAL,
+        )
     ),
     state=DanMenu.main,
     parse_mode=ParseMode.HTML,
