@@ -2,7 +2,11 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
-from aiogram.filters.command import Command
+from aiogram.filters import CommandStart, ExceptionTypeFilter
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.methods import DeleteWebhook
+from aiogram_dialog import setup_dialogs
+from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from environs import load_dotenv
 from loguru import logger
@@ -12,12 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.commands import set_default_commands
 from app.config import logger_setup
+from app.dialogs.main_dialog import dialog
 from app.filters.is_admin import AdminFilter
-from app.handlers.add import add_sub
-from app.handlers.delete import delete_sub
 from app.handlers.start import start
-from app.handlers.subs import show_subs
-from app.middlewares.db import DatabaseMiddleware
+from app.handlers.unknown_errors import on_unknown_intent, on_unknown_state
+from app.middlewares.repo import RepoMiddleware
+from app.middlewares.scheduler import SchedulerMiddleware
 from app.services.danbooru import check_new_posts
 
 load_dotenv()
@@ -25,14 +29,13 @@ load_dotenv()
 
 async def create_schema(async_sessionmaker: async_sessionmaker[AsyncSession]):
     async with async_sessionmaker() as session:
-        async with session.begin():
-            try:
-                with open("database/init.sql") as file:
-                    lines = file.readlines()
-                    for line in lines:
-                        await session.execute(text(line))
-            except Exception as e:
-                logger.error(e)
+        try:
+            with open("database/init.sql") as file:
+                lines = file.readlines()
+                for line in lines:
+                    await session.execute(text(line))
+        except Exception as e:
+            logger.error(e)
 
 
 async def main():
@@ -49,18 +52,28 @@ async def main():
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
-
+    storage = MemoryStorage()
     bot = Bot(token=bot_token, parse_mode="HTML")
-    dp = Dispatcher()
+    dp = Dispatcher(storage=storage)
     danbooru = Danbooru("danbooru")
     scheduler = AsyncIOScheduler()
     await create_schema(sessionmaker)
     await set_default_commands(bot)
-    dp.message.register(start, Command("start"), AdminFilter(admin_id))
-    dp.message.register(add_sub, Command("add"), AdminFilter(admin_id))
-    dp.message.register(delete_sub, Command("del"), AdminFilter(admin_id))
-    dp.message.register(show_subs, Command("subs"), AdminFilter(admin_id))
-    dp.message.middleware(DatabaseMiddleware(sessionmaker))
+
+    dp.errors.register(
+        on_unknown_intent,
+        ExceptionTypeFilter(UnknownIntent),
+    )
+    dp.errors.register(
+        on_unknown_state,
+        ExceptionTypeFilter(UnknownState),
+    )
+
+    dp.include_router(dialog)
+    setup_dialogs(dp)
+    dp.update.middleware(RepoMiddleware(sessionmaker))
+    dp.update.middleware(SchedulerMiddleware(scheduler))
+    dp.message.register(start, CommandStart(), AdminFilter(admin_id))
 
     logger_setup()
 
@@ -73,6 +86,7 @@ async def main():
     scheduler.start()
 
     logger.debug("Бот запущен")
+    await bot(DeleteWebhook(drop_pending_updates=True))
     await dp.start_polling(bot)
 
 

@@ -1,14 +1,8 @@
 from aiogram import types
-from asyncio import sleep
+from aiogram_dialog import DialogManager, StartMode
+
+from app.states.danmenu import DanMenu
 
 
-async def start(message: types.Message):
-    await message.answer("Привет, я booru бот!")
-    await sleep(0.7)
-    await message.answer(
-        """<b>Я могу следить за обновления твоих любимых Danbooru тэгов\n
-        /add tag Добавить тэг в подписки\n
-        /subs Посмотреть подписки\n
-        /del tag Удалить подписку</b>
-    """
-    )
+async def start(message: types.Message, dialog_manager: DialogManager):
+    await dialog_manager.start(DanMenu.main, mode=StartMode.RESET_STACK)

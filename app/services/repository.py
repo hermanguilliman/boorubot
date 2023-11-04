@@ -1,6 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 from loguru import logger
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class Repo:
@@ -13,8 +13,8 @@ class Repo:
             text("SELECT DISTINCT tags FROM subscriptions;")
         )
         tags = tags.fetchall()
-        tags = ["".join(tag) for tag in tags]
-        return tags
+        tag_list = ["".join(tag) for tag in tags]
+        return tag_list
 
     async def add_subscription(self, tags: str) -> bool:
         # добавить tags в подписки

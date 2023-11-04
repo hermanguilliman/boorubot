@@ -5,7 +5,7 @@ from loguru import logger
 from pybooru import Danbooru
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.services.repo import Repo
+from app.services.repository import Repo
 
 
 async def get_new_posts_by_tags(danbooru, repo: Repo, tags: str = None) -> list | None:
@@ -22,8 +22,7 @@ async def get_new_posts_by_tags(danbooru, repo: Repo, tags: str = None) -> list 
 
 async def create_session(async_sessionmaker: async_sessionmaker[AsyncSession]):
     async with async_sessionmaker() as session:
-        async with session.begin():
-            return session
+        return session
 
 
 async def check_new_posts(

@@ -8,15 +8,6 @@ async def set_default_commands(bot: Bot):
             command="start",
             description="Начало",
         ),
-        BotCommand(
-            command="add",
-            description="Добавить подписку (указать какую)",
-        ),
-        BotCommand(
-            command="del",
-            description="Удалить подписку (указать какую)",
-        ),
-        BotCommand(command="subs", description="Показать все активные подписки"),
     ]
 
     await bot.set_my_commands(commands=commands, scope=BotCommandScopeDefault())
