@@ -10,7 +10,7 @@ from app.states.danmenu import DanMenu
 async def add_new_subscribe(
     message: Message, message_input: MessageInput, manager: DialogManager
 ):
-    repo: Repo = manager.dialog_data.get("repo")
+    repo: Repo = manager.middleware_data.get("repo")
     tags = message.text
     result = await repo.add_subscription(tags)
     if result:

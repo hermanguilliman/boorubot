@@ -6,7 +6,6 @@ from app.services.schedules import Schedules
 
 async def main_window_getter(dialog_manager: DialogManager, **kwargs):
     repo: Repo = dialog_manager.middleware_data.get("repo")
-    dialog_manager.dialog_data["repo"] = repo
     scheduler: Schedules = dialog_manager.middleware_data.get("scheduler")
     subscribes = await repo.get_subscriptions_list()
     minutes_until_next_run = await scheduler.get_next_update()
