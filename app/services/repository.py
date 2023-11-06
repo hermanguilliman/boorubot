@@ -1,20 +1,24 @@
 from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
 
 class Repo:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_subscriptions_list(self) -> list:
+    async def get_subscriptions_list(self) -> List | None:
         # Получение всех подписок
         tags = await self.session.execute(
             text("SELECT DISTINCT tags FROM subscriptions;")
         )
         tags = tags.fetchall()
-        tag_list = ["".join(tag) for tag in tags]
-        return tag_list
+        if tags:
+            tag_list = ["".join(tag) for tag in tags]
+            return tag_list
+        else:
+            return None
 
     async def add_subscription(self, tags: str) -> bool:
         # добавить tags в подписки
@@ -45,7 +49,6 @@ class Repo:
                         text(f"INSERT INTO posts (id) VALUES ({_id})")
                     )
                     await self.session.commit()
-            logger.info(f"Получено {len(new_posts)} новых постов")
             return new_posts
         else:
             return None

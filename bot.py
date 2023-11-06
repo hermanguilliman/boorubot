@@ -8,7 +8,7 @@ from aiogram.methods import DeleteWebhook
 from aiogram_dialog import setup_dialogs
 from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from environs import load_dotenv
+from dotenv import load_dotenv
 from loguru import logger
 from pybooru import Danbooru
 from sqlalchemy import text
@@ -39,8 +39,8 @@ async def create_schema(async_sessionmaker: async_sessionmaker[AsyncSession]):
 
 
 async def main():
-    bot_token: str = os.getenv("BOT")
-    admin_id: int = int(os.getenv("ADMIN"))
+    bot_token: str | None = os.getenv("BOT")
+    admin_id: str | None = os.getenv("ADMIN")
 
     if not bot_token:
         logger.error("Не найден токен телеграм бота!")
@@ -73,7 +73,7 @@ async def main():
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(sessionmaker))
     dp.update.middleware(SchedulerMiddleware(scheduler))
-    dp.message.register(start, CommandStart(), AdminFilter(admin_id))
+    dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))
 
     logger_setup()
 
