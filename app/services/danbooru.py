@@ -28,7 +28,7 @@ async def get_new_posts_by_tags(danbooru, repo: Repo, tags: str = None) -> List 
     if tags:
         last_posts = danbooru.post_list(tags=tags, limit=10)
         new_posts = await repo.filter_new_posts(posts=last_posts)
-        if len(new_posts) > 0:
+        if new_posts:
             logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
             return new_posts
     else:
