@@ -4,7 +4,7 @@ from typing import List
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from loguru import logger
-from pybooru import Danbooru
+from pybooru import Danbooru, PybooruHTTPError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.services.repository import Repo
@@ -21,12 +21,15 @@ async def create_session(async_sessionmaker: async_sessionmaker[AsyncSession]):
         return session
 
 
-async def get_new_posts_by_tags(danbooru, repo: Repo, tags: str = None) -> List | None:
+async def get_new_posts_by_tags(danbooru: Danbooru, repo: Repo, tags: str = None) -> List | None:
     """
     Возвращает посты, которые еще не были отправлены
     """
     if tags:
-        last_posts = danbooru.post_list(tags=tags, limit=10)
+        try:
+            last_posts = danbooru.post_list(tags=tags, limit=10)
+        except PybooruHTTPError as e:
+            logger.error(e)
         new_posts = await repo.filter_new_posts(posts=last_posts)
         if new_posts:
             logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
