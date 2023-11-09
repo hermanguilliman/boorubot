@@ -14,5 +14,6 @@ class Schedules:
         next_run_time = self.scheduler.get_jobs()[0].next_run_time
         return int((next_run_time - current_time).total_seconds() / 60)
 
-    async def set_update_interval(self, hours: int) -> bool:
-        pass
+    async def do_next_job_now(self) -> bool:
+        job = self.scheduler.get_jobs()[0]
+        job.modify(next_run_time=datetime.now())
