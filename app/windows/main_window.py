@@ -14,8 +14,8 @@ main_window = Window(
         when="minutes_until_next_update",
     ),
     Row(
-        SwitchTo(Const("🍏 Добавить"), id="add", state=DanMenu.add),
-        SwitchTo(Const("🍎 Удалить"), id="delete", state=DanMenu.delete),
+        SwitchTo(Const("💚 Добавить"), id="add", state=DanMenu.add),
+        SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
     ),
     Button(Const("📬 Получить новые посты"), id="update_now", on_click=on_update_now),
 

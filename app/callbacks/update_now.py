@@ -7,5 +7,6 @@ from app.services.schedules import Schedules
 async def on_update_now(callback: CallbackQuery, button: Button,
                     manager: DialogManager):
     scheduler: Schedules = manager.middleware_data.get("scheduler")
+    await callback.answer("Запущена проверка обновлений!")
     await scheduler.do_next_job_now()
 
