@@ -18,7 +18,7 @@ deleting_window = Window(
             on_click=on_subscibe_deleted,
         ),
         width=2,
-        height=5,
+        height=10,
         id="scrolling_tags",
         when="tags",
     ),
