@@ -3,6 +3,7 @@ services:
   bot:
     build:
       context: .
+    restart: always
     env_file:
       - .env
     volumes:
