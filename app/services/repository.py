@@ -1,5 +1,6 @@
 from loguru import logger
 from sqlalchemy import text
+from app.models.danbooru import DanbooruPost
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -33,20 +34,19 @@ class Repo:
             logger.debug(e)
             return False
 
-    async def filter_new_posts(self, posts) -> list | None:
+    async def filter_new_posts(self, posts: List[DanbooruPost]) -> list | None:
         # Фильтрует посты, записывая их в бд и возвращает список ссылок на новые
         if posts:
             new_posts = []
             for post in posts:
-                _id = post["id"]
                 result = await self.session.execute(
-                    text(f"SELECT id FROM posts WHERE id = {_id}")
+                    text(f"SELECT id FROM posts WHERE id = {post.id}")
                 )
                 result = result.fetchone()
                 if result is None:
                     new_posts.append(post)
                     await self.session.execute(
-                        text(f"INSERT INTO posts (id) VALUES ({_id})")
+                        text(f"INSERT INTO posts (id) VALUES ({post.id})")
                     )
                     await self.session.commit()
             return new_posts

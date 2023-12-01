@@ -1,138 +1,169 @@
 from asyncio import sleep
+from datetime import datetime
 from typing import List
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
+from aiohttp import ClientSession
 from loguru import logger
-from pybooru import Danbooru, PybooruHTTPError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.models.danbooru import DanbooruPost
 from app.services.repository import Repo
 
 
-def short_caption(caption: str) -> str:
-    if len(caption) > 1024:
-        caption = caption[:1024]
-    return caption
+class DanbooruService:
+    def __init__(
+        self,
+        async_sessionmaker: async_sessionmaker[AsyncSession],
+        bot: Bot,
+        admin_id: int,
+    ):
+        self.base_url = "https://danbooru.donmai.us"
+        self.headers = {"Content-Type": "application/json"}
+        self.http_session = ClientSession
+        self.database_sessionmaker = async_sessionmaker
+        self.telegram_bot = bot
+        self.admin_id = admin_id
 
+    async def _create_session(self):
+        async with self.database_sessionmaker() as session:
+            return session
 
-async def create_session(async_sessionmaker: async_sessionmaker[AsyncSession]):
-    async with async_sessionmaker() as session:
-        return session
+    async def _get_post(self, post_id):
+        url = f"{self.base_url}/posts/{post_id}.json"
+        async with self.http_session() as session:
+            async with session.get(url, headers=self.headers) as response:
+                data = await response.json()
+                return DanbooruPost(**data)
 
+    async def _get_popular_posts(self):
+        url = f"{self.base_url}/explore/posts/popular.json"
+        today = datetime.now().strftime("%Y-%m-%d")
+        params = {"date": today, "scale": "day", "page": 1}
+        async with self.http_session() as session:
+            async with session.get(
+                url, headers=self.headers, params=params
+            ) as response:
+                data = await response.json()
+                return [DanbooruPost(**post) for post in data]
 
-async def get_new_posts_by_tags(danbooru: Danbooru, repo: Repo, tags: str = None) -> List | None:
-    """
-    Возвращает посты, которые еще не были отправлены
-    """
-    if tags:
-        try:
-            last_posts = danbooru.post_list(tags=tags, limit=10)
-        except PybooruHTTPError as e:
-            logger.error(e)
-        new_posts = await repo.filter_new_posts(posts=last_posts)
-        if new_posts:
-            logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
-            return new_posts
-    else:
-        return None
+    async def _search_posts(self, tags, limit=10):
+        url = f"{self.base_url}/posts.json"
+        params = {"tags": tags, "limit": limit}
+        async with self.http_session() as session:
+            async with session.get(
+                url=url, headers=self.headers, params=params
+            ) as response:
+                data = await response.json()
+                return [DanbooruPost(**post) for post in data]
 
+    async def _get_subscriptions(self, repo: Repo) -> List | None:
+        subscriptions = await repo.get_subscriptions_list()
+        return subscriptions
 
-async def check_new_posts(
-    bot: Bot,
-    async_sessionmaker: async_sessionmaker[AsyncSession],
-    danbooru: Danbooru,
-    admin_id: int,
-):
-    """
-    Получаем список подписок, проверяем обновления для каждого элемента
-    и отправляем новые посты в чат
-    """
-
-    session = await create_session(async_sessionmaker)
-    repo = Repo(session)
-    logger.info("Проверка новых сообщений")
-
-    subscriptions = await get_subscriptions(repo)
-
-    if subscriptions:
-        new_posts = await get_new_posts(danbooru, repo, subscriptions)
-
-        if len(new_posts) > 0:
-            await send_new_posts(bot, admin_id, new_posts)
-        else:
-            logger.info("Новые посты не найдены")
-    else:
-        logger.info("Подписки не найдены")
-
-
-async def get_subscriptions(repo: Repo) -> List | None:
-    """
-    Получает список подписок из репозитория
-    """
-    subscriptions = await repo.get_subscriptions_list()
-    return subscriptions
-
-
-async def get_new_posts(
-    danbooru: Danbooru, repo: Repo, subscriptions: List
-) -> List[dict]:
-    """
-    Получает новые посты для каждой подписки
-    """
-    new_posts = []
-    for sub in subscriptions:
-        posts = await get_new_posts_by_tags(danbooru, repo, sub)
-        if posts:
-            new_posts.extend(posts)
-    return new_posts
-
-
-async def send_new_posts(bot: Bot, admin_id: int, new_posts: List[dict]):
-    """
-    Отправляет новые посты в чат администратора
-    """
-    for post in new_posts:
-        if "file_url" in post:
-            url = post["file_url"]
+    async def _get_new_posts_by_tags(self, repo: Repo, tags: str = None) -> List | None:
+        """
+        Возвращает посты, которые еще не были отправлены
+        """
+        if tags:
             try:
-                caption = get_post_caption(post)
-                if post["file_ext"] in ("jpg", "jpeg", "png", "webp"):
-                    await bot.send_photo(
-                        chat_id=admin_id,
-                        photo=url,
-                        caption=caption,
-                        parse_mode=ParseMode.HTML,
-                    )
-                elif post["file_ext"] in ("mp4", "webm"):
-                    await bot.send_video(
-                        chat_id=admin_id,
-                        video=url,
-                        caption=caption,
-                        parse_mode=ParseMode.HTML,
-                    )
-                elif post["file_ext"] == "gif":
-                    await bot.send_animation(
-                        chat_id=admin_id,
-                        animation=url,
-                        caption=caption,
-                        parse_mode=ParseMode.HTML,
-                    )
-                else:
-                    logger.debug(f"Не знаю что делать с форматом {post['file_ext']}")
-                await sleep(2)
+                last_posts = await self._search_posts(tags=tags, limit=10)
             except Exception as e:
-                await bot.send_message(
-                    admin_id,
-                    f"При отправке {url}\nпроизошла ошибка:\n{e}",
-                    parse_mode=None,
-                )
+                logger.error(e)
+            new_posts = await repo.filter_new_posts(posts=last_posts)
+            if new_posts:
+                logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
+                return new_posts
+        else:
+            return None
 
+    @staticmethod
+    def _short_caption(caption: str) -> str:
+        if len(caption) > 1024:
+            caption = caption[:1024]
+        return caption
 
-def get_post_caption(post: dict) -> str:
-    """
-    Создает подпись для поста
-    """
-    caption = f"<b>Создатель:</b> {post['tag_string_artist']}\n<b>Персонаж:</b> {post['tag_string_character']}\n<b>Теги:</b> {post['tag_string_general']}"
-    caption = short_caption(caption)
-    return caption
+    def _get_post_caption(self, post: DanbooruPost) -> str:
+        """
+        Создает подпись для поста
+        """
+        caption = f"<b>Создатель:</b> {post.tag_string_artist}\n<b>Персонажи:</b> {post.tag_string_character}\n<b>Теги:</b> {post.tag_string}"
+        caption = DanbooruService._short_caption(caption)
+        return caption
+
+    async def _send_new_posts(self, new_posts: List[DanbooruPost]):
+        """
+        Отправляет новые посты в чат администратора
+        """
+        for post in new_posts:
+            if post.large_file_url:
+                try:
+                    caption = self._get_post_caption(post)
+                    if post.file_ext in ("jpg", "jpeg", "png", "webp"):
+                        await self.telegram_bot.send_photo(
+                            chat_id=self.admin_id,
+                            photo=post.large_file_url,
+                            caption=caption,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    elif post.file_ext in ("mp4", "webm"):
+                        await self.telegram_bot.send_video(
+                            chat_id=self.admin_id,
+                            video=post.large_file_url,
+                            caption=caption,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    elif post.file_ext == "gif":
+                        await self.telegram_bot.send_animation(
+                            chat_id=self.admin_id,
+                            animation=post.large_file_url,
+                            caption=caption,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    else:
+                        logger.debug(f"Не знаю что делать с форматом {post.file_ext}")
+                except Exception as e:
+                    await self.telegram_bot.send_message(
+                        self.admin_id,
+                        f"{post.large_file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
+                        parse_mode=ParseMode.HTML,
+                    )
+                await sleep(1)
+
+    async def _get_new_posts(self, repo: Repo, subscriptions: List) -> List[dict]:
+        """
+        Получает новые посты для каждой подписки
+        """
+        new_posts = []
+        for sub in subscriptions:
+            posts = await self._get_new_posts_by_tags(repo, sub)
+            if posts:
+                new_posts.extend(posts)
+        return new_posts
+
+    async def check_new_posts(self):
+        """
+        Получаем свежие посты
+        """
+        session = await self._create_session()
+        repo = Repo(session)
+        logger.info("Проверка новых сообщений")
+
+        subscriptions = await self._get_subscriptions(repo)
+
+        if subscriptions:
+            new_posts = await self._get_new_posts(repo, subscriptions)
+
+            if len(new_posts) > 0:
+                await self._send_new_posts(new_posts)
+            else:
+                logger.info("Новые посты не найдены")
+        else:
+            logger.info("Подписки не найдены")
+
+    async def check_popular_posts(self):
+        posts = await self._get_popular_posts()
+        if posts:
+            if len(posts) > 0:
+                await self._send_new_posts(posts)

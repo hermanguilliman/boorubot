@@ -10,7 +10,6 @@ from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from loguru import logger
-from pybooru import Danbooru
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -22,7 +21,7 @@ from app.handlers.start import start
 from app.handlers.unknown_errors import on_unknown_intent, on_unknown_state
 from app.middlewares.repo import RepoMiddleware
 from app.middlewares.scheduler import SchedulerMiddleware
-from app.services.danbooru import check_new_posts
+from app.services.danbooru import DanbooruService
 
 load_dotenv()
 
@@ -55,7 +54,7 @@ async def main():
     storage = MemoryStorage()
     bot = Bot(token=bot_token, parse_mode="HTML")
     dp = Dispatcher(storage=storage)
-    danbooru = Danbooru("danbooru")
+    danbooru = DanbooruService(sessionmaker, bot, admin_id)
     scheduler = AsyncIOScheduler()
     await create_schema(sessionmaker)
     await set_default_commands(bot)
@@ -78,10 +77,9 @@ async def main():
     logger_setup()
 
     scheduler.add_job(
-        check_new_posts,
+        danbooru.check_new_posts,
         "interval",
         hours=1,
-        args=(bot, sessionmaker, danbooru, admin_id),
     )
     scheduler.start()
 
