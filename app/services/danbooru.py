@@ -48,7 +48,7 @@ class DanbooruService:
                 data = await response.json()
                 return [DanbooruPost(**post) for post in data]
 
-    async def _search_posts(self, tags, limit=10):
+    async def _search_posts(self, tags: str, limit=10):
         url = f"{self.base_url}/posts.json"
         params = {"tags": tags, "limit": limit}
         async with self.http_session() as session:
@@ -60,6 +60,7 @@ class DanbooruService:
 
     async def _get_subscriptions(self, repo: Repo) -> List | None:
         subscriptions = await repo.get_subscriptions_list()
+        await repo.session.close()
         return subscriptions
 
     async def _get_new_posts_by_tags(self, repo: Repo, tags: str = None) -> List | None:
@@ -67,11 +68,9 @@ class DanbooruService:
         Возвращает посты, которые еще не были отправлены
         """
         if tags:
-            try:
-                last_posts = await self._search_posts(tags=tags, limit=10)
-            except Exception as e:
-                logger.error(e)
+            last_posts = await self._search_posts(tags=tags)
             new_posts = await repo.filter_new_posts(posts=last_posts)
+            await repo.session.close()
             if new_posts:
                 logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
                 return new_posts
@@ -97,27 +96,27 @@ class DanbooruService:
         Отправляет новые посты в чат администратора
         """
         for post in new_posts:
-            if post.large_file_url:
+            if post.file_url:
                 try:
                     caption = self._get_post_caption(post)
                     if post.file_ext in ("jpg", "jpeg", "png", "webp"):
                         await self.telegram_bot.send_photo(
                             chat_id=self.admin_id,
-                            photo=post.large_file_url,
+                            photo=post.file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
                     elif post.file_ext in ("mp4", "webm"):
                         await self.telegram_bot.send_video(
                             chat_id=self.admin_id,
-                            video=post.large_file_url,
+                            video=post.file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
                     elif post.file_ext == "gif":
                         await self.telegram_bot.send_animation(
                             chat_id=self.admin_id,
-                            animation=post.large_file_url,
+                            animation=post.file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
@@ -126,7 +125,7 @@ class DanbooruService:
                 except Exception as e:
                     await self.telegram_bot.send_message(
                         self.admin_id,
-                        f"{post.large_file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
+                        f"{post.file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
                         parse_mode=ParseMode.HTML,
                     )
                 await sleep(1)
@@ -136,8 +135,8 @@ class DanbooruService:
         Получает новые посты для каждой подписки
         """
         new_posts = []
-        for sub in subscriptions:
-            posts = await self._get_new_posts_by_tags(repo, sub)
+        for tags in subscriptions:
+            posts = await self._get_new_posts_by_tags(repo=repo, tags=tags)
             if posts:
                 new_posts.extend(posts)
         return new_posts
