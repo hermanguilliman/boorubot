@@ -1,8 +1,10 @@
+from typing import List
+
 from loguru import logger
 from sqlalchemy import text
-from app.models.danbooru import DanbooruPost
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+
+from app.models.danbooru import DanbooruPost
 
 
 class Repo:
@@ -34,7 +36,9 @@ class Repo:
             logger.debug(e)
             return False
 
-    async def filter_new_posts(self, posts: List[DanbooruPost]) -> list | None:
+    async def filter_new_posts(
+        self, posts: List[DanbooruPost]
+    ) -> List[DanbooruPost] | None:
         # Фильтрует посты, записывая их в бд и возвращает список ссылок на новые
         if posts:
             new_posts = []
