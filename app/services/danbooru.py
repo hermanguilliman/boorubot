@@ -96,27 +96,27 @@ class DanbooruService:
         Отправляет новые посты в чат администратора
         """
         for post in new_posts:
-            if post.file_url:
+            if post.large_file_url:
                 try:
                     caption = self._get_post_caption(post)
                     if post.file_ext in ("jpg", "jpeg", "png", "webp"):
                         await self.telegram_bot.send_photo(
                             chat_id=self.admin_id,
-                            photo=post.file_url,
+                            photo=post.large_file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
                     elif post.file_ext in ("mp4", "webm"):
                         await self.telegram_bot.send_video(
                             chat_id=self.admin_id,
-                            video=post.file_url,
+                            video=post.large_file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
                     elif post.file_ext == "gif":
                         await self.telegram_bot.send_animation(
                             chat_id=self.admin_id,
-                            animation=post.file_url,
+                            animation=post.large_file_url,
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
@@ -125,7 +125,7 @@ class DanbooruService:
                 except Exception as e:
                     await self.telegram_bot.send_message(
                         self.admin_id,
-                        f"{post.file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
+                        f"{post.large_file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
                         parse_mode=ParseMode.HTML,
                     )
                 await sleep(1)

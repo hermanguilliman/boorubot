@@ -7,7 +7,7 @@ class DanbooruPost(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: int
-    file_url: str
+    large_file_url: Optional[str]
     file_ext: str
     rating: Optional[str]
     tag_string: Optional[str]
