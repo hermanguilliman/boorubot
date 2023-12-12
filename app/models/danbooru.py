@@ -13,3 +13,4 @@ class DanbooruPost(BaseModel):
     tag_string: Optional[str]
     tag_string_artist: Optional[str]
     tag_string_character: Optional[str]
+    tag_string_copyright: Optional[str]

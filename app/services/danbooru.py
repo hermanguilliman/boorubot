@@ -1,4 +1,4 @@
-from asyncio import sleep
+import asyncio
 from datetime import datetime
 from typing import List
 
@@ -25,10 +25,6 @@ class DanbooruService:
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
-
-    async def _create_session(self):
-        async with self.database_sessionmaker() as session:
-            return session
 
     async def _get_post(self, post_id):
         url = f"{self.base_url}/posts/{post_id}.json"
@@ -58,34 +54,39 @@ class DanbooruService:
                 data = await response.json()
                 return [DanbooruPost(**post) for post in data]
 
-    async def _get_subscriptions(self, repo: Repo) -> List | None:
-        subscriptions = await repo.get_subscriptions_list()
-        await repo.session.close()
-        return subscriptions
+    async def _get_subscriptions(self) -> List | None:
+        async with self.database_sessionmaker() as session:
+            repo = Repo(session)
+            subscriptions = await repo.get_subscriptions_list()
+            return subscriptions
 
     async def _filter_new_posts(
-        self, posts: List[DanbooruPost], repo: Repo
+        self, posts: List[DanbooruPost]
     ) -> List[DanbooruPost] | None:
         # Фильтрует посты, записывая их в бд и возвращает список ссылок на новые
-        if posts:
-            new_posts = []
-            for post in posts:
-                result = await repo.get_post(post.id)
-                if result is None:
-                    new_posts.append(post)
-                    await repo.add_post(post.id)
-            return new_posts
-        else:
-            return None
-        
-    async def _get_new_posts_by_tags(self, repo: Repo, tags: str = None) -> List | None:
+        async with self.database_sessionmaker() as session:
+            repo = Repo(session)
+            if posts:
+                new_posts = []
+                for post in posts:
+                    result = await repo.get_post(post.id)
+                    if result is None:
+                        new_posts.append(post)
+                        await repo.add_post(post.id)
+                return new_posts
+            else:
+                return None
+
+    async def _get_new_posts_by_tags(
+        self, tags: str = None
+    ) -> List[DanbooruPost] | None:
         """
         Возвращает посты, которые еще не были отправлены
         """
         if tags:
             last_posts = await self._search_posts(tags=tags)
-            new_posts = await self._filter_new_posts(posts=last_posts, repo=repo)
-            await repo.session.close()
+            new_posts = await self._filter_new_posts(posts=last_posts)
+            # await repo.session.close()
             if new_posts:
                 logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
                 return new_posts
@@ -102,7 +103,7 @@ class DanbooruService:
         """
         Создает подпись для поста
         """
-        caption = f"<b>Создатель:</b> {post.tag_string_artist}\n<b>Персонажи:</b> {post.tag_string_character}\n<b>Теги:</b> {post.tag_string}"
+        caption = f"<b>Создатель:</b> {post.tag_string_artist}\n<b>Персонаж:</b> {post.tag_string_character}\n<b>Копирайт:</b> {post.tag_string_copyright}"
         caption = DanbooruService._short_caption(caption)
         return caption
 
@@ -111,7 +112,7 @@ class DanbooruService:
         Отправляет новые посты в чат администратора
         """
         for post in new_posts:
-            if post.large_file_url:
+            if hasattr(post, "large_file_url") and post is not None:
                 try:
                     caption = self._get_post_caption(post)
                     if post.file_ext in ("jpg", "jpeg", "png", "webp"):
@@ -143,31 +144,31 @@ class DanbooruService:
                         f"{post.large_file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
                         parse_mode=ParseMode.HTML,
                     )
-                await sleep(1)
+                await asyncio.sleep(1)
 
-    async def _get_new_posts(self, repo: Repo, subscriptions: List) -> List[dict]:
+    async def _get_new_posts(self, subscriptions: List) -> List[DanbooruPost]:
         """
         Получает новые посты для каждой подписки
         """
-        new_posts = []
+        tasks = []
+        
         for tags in subscriptions:
-            posts = await self._get_new_posts_by_tags(repo=repo, tags=tags)
-            if posts:
-                new_posts.extend(posts)
-        return new_posts
+            tasks.append(asyncio.create_task(self._get_new_posts_by_tags(tags=tags)))
+
+        results = await asyncio.gather(*tasks)
+        posts = [post for posts in results for post in posts]
+        return posts
 
     async def check_new_posts(self):
         """
         Получаем свежие посты
         """
-        session = await self._create_session()
-        repo = Repo(session)
         logger.info("Проверка новых сообщений")
 
-        subscriptions = await self._get_subscriptions(repo)
+        subscriptions = await self._get_subscriptions()
 
         if subscriptions:
-            new_posts = await self._get_new_posts(repo, subscriptions)
+            new_posts: List[DanbooruPost] = await self._get_new_posts(subscriptions)
 
             if len(new_posts) > 0:
                 await self._send_new_posts(new_posts)
