@@ -54,8 +54,9 @@ class DanbooruService:
                 async with session.get(
                     url=url, headers=self.headers, params=params
                 ) as response:
-                    data = await response.json()
-                    return [DanbooruPost(**post) for post in data]
+                    if response.status == 200:
+                        data = await response.json("application/json")
+                        return [DanbooruPost(**post) for post in data]
 
     async def _get_subscriptions(self) -> List | None:
         async with self.database_sessionmaker() as session:
