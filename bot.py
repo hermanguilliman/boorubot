@@ -10,8 +10,7 @@ from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from loguru import logger
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
 from app.commands import set_default_commands
 from app.config import logger_setup
@@ -21,20 +20,18 @@ from app.handlers.start import start
 from app.handlers.unknown_errors import on_unknown_intent, on_unknown_state
 from app.middlewares.repo import RepoMiddleware
 from app.middlewares.scheduler import SchedulerMiddleware
+from app.models.base import Base
 from app.services.danbooru import DanbooruService
 
 load_dotenv()
 
 
-async def create_schema(async_sessionmaker: async_sessionmaker[AsyncSession]):
-    async with async_sessionmaker() as session:
-        try:
-            with open("database/init.sql") as file:
-                lines = file.readlines()
-                for line in lines:
-                    await session.execute(text(line))
-        except Exception as e:
-            logger.error(e)
+async def create_schema(engine: AsyncEngine):
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.error(e)
 
 
 async def main():
@@ -50,13 +47,13 @@ async def main():
 
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
+    await create_schema(engine)
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
     storage = MemoryStorage()
     bot = Bot(token=bot_token, parse_mode="HTML")
     dp = Dispatcher(storage=storage)
     danbooru = DanbooruService(sessionmaker, bot, admin_id)
     scheduler = AsyncIOScheduler()
-    await create_schema(sessionmaker)
     await set_default_commands(bot)
 
     dp.errors.register(

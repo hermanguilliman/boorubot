@@ -11,6 +11,8 @@ async def on_subscibe_deleted(
 ):
     repo: Repo = manager.middleware_data.get("repo")
     await repo.delete_sub(tags=item_id)
-    await callback.message.answer(f"🍎 Подписка {item_id} успешно удалена!")
+    await callback.message.answer(
+        f"<b>👌 Подписка {item_id} успешно удалена!</b>", parse_mode="HTML"
+    )
     await manager.done()
     await manager.start(DanMenu.main, mode=StartMode.RESET_STACK)

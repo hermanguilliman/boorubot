@@ -63,13 +63,28 @@ class DanbooruService:
         await repo.session.close()
         return subscriptions
 
+    async def _filter_new_posts(
+        self, posts: List[DanbooruPost], repo: Repo
+    ) -> List[DanbooruPost] | None:
+        # Фильтрует посты, записывая их в бд и возвращает список ссылок на новые
+        if posts:
+            new_posts = []
+            for post in posts:
+                result = await repo.get_post(post.id)
+                if result is None:
+                    new_posts.append(post)
+                    await repo.add_post(post.id)
+            return new_posts
+        else:
+            return None
+        
     async def _get_new_posts_by_tags(self, repo: Repo, tags: str = None) -> List | None:
         """
         Возвращает посты, которые еще не были отправлены
         """
         if tags:
             last_posts = await self._search_posts(tags=tags)
-            new_posts = await repo.filter_new_posts(posts=last_posts)
+            new_posts = await self._filter_new_posts(posts=last_posts, repo=repo)
             await repo.session.close()
             if new_posts:
                 logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
