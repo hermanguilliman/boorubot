@@ -25,7 +25,7 @@ class DanbooruService:
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
-        self.semaphore = asyncio.Semaphore(10)
+        self.semaphore = asyncio.Semaphore(5)
 
     async def _get_post(self, post_id):
         url = f"{self.base_url}/posts/{post_id}.json"
