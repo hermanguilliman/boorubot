@@ -30,8 +30,11 @@ class DanbooruService:
         url = f"{self.base_url}/posts/{post_id}.json"
         async with self.http_session() as session:
             async with session.get(url, headers=self.headers) as response:
-                data = await response.json()
-                return DanbooruPost(**data)
+                try:
+                    data = await response.json()
+                    return DanbooruPost(**data)
+                except Exception as e:
+                    logger.error(e)
 
     async def _get_popular_posts(self):
         url = f"{self.base_url}/explore/posts/popular.json"
@@ -151,7 +154,7 @@ class DanbooruService:
         Получает новые посты для каждой подписки
         """
         tasks = []
-        
+
         for tags in subscriptions:
             tasks.append(asyncio.create_task(self._get_new_posts_by_tags(tags=tags)))
 
