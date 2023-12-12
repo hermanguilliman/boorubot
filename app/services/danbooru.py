@@ -25,7 +25,7 @@ class DanbooruService:
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
-        self.semaphore = asyncio.Semaphore(5)
+        self.semaphore = asyncio.Semaphore(10)
 
     async def _get_post(self, post_id):
         url = f"{self.base_url}/posts/{post_id}.json"
@@ -57,6 +57,8 @@ class DanbooruService:
                     if response.status == 200:
                         data = await response.json(content_type="application/json")
                         return [DanbooruPost(**post) for post in data]
+                    else:
+                        logger.debug(f"Response status: {response.status}")
 
     async def _get_subscriptions(self) -> List | None:
         async with self.database_sessionmaker() as session:
@@ -184,6 +186,7 @@ class DanbooruService:
                 logger.info("Новые посты не найдены")
         else:
             logger.info("Подписки не найдены")
+        logger.info("Проверка закончена")
 
     async def check_popular_posts(self):
         posts = await self._get_popular_posts()
