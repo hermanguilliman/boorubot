@@ -86,15 +86,18 @@ class DanbooruService:
         """
         Возвращает посты, которые еще не были отправлены
         """
-        if tags:
-            last_posts = await self._search_posts(tags=tags)
-            new_posts = await self._filter_new_posts(posts=last_posts)
-            # await repo.session.close()
-            if new_posts:
-                logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
-                return new_posts
-        else:
-            return None
+        try:
+            if tags:
+                last_posts = await self._search_posts(tags=tags)
+                new_posts = await self._filter_new_posts(posts=last_posts)
+
+                if new_posts:
+                    logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
+                    return new_posts
+            else:
+                return None
+        except Exception as e:
+            logger.error(e)
 
     @staticmethod
     def _short_caption(caption: str) -> str:
