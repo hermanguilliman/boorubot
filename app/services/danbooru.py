@@ -25,16 +25,15 @@ class DanbooruService:
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
+        self.semaphore = asyncio.Semaphore(5)
 
     async def _get_post(self, post_id):
         url = f"{self.base_url}/posts/{post_id}.json"
         async with self.http_session() as session:
             async with session.get(url, headers=self.headers) as response:
-                try:
-                    data = await response.json()
-                    return DanbooruPost(**data)
-                except Exception as e:
-                    logger.error(e)
+                data = await response.json()
+                return DanbooruPost(**data)
+
 
     async def _get_popular_posts(self):
         url = f"{self.base_url}/explore/posts/popular.json"
@@ -50,12 +49,13 @@ class DanbooruService:
     async def _search_posts(self, tags: str, limit=10):
         url = f"{self.base_url}/posts.json"
         params = {"tags": tags, "limit": limit}
-        async with self.http_session() as session:
-            async with session.get(
-                url=url, headers=self.headers, params=params
-            ) as response:
-                data = await response.json()
-                return [DanbooruPost(**post) for post in data]
+        async with self.semaphore:
+            async with self.http_session() as session:
+                async with session.get(
+                    url=url, headers=self.headers, params=params
+                ) as response:
+                    data = await response.json()
+                    return [DanbooruPost(**post) for post in data]
 
     async def _get_subscriptions(self) -> List | None:
         async with self.database_sessionmaker() as session:
