@@ -162,6 +162,7 @@ class DanbooruService:
             tasks.append(asyncio.create_task(self._get_new_posts_by_tags(tags=tags)))
 
         results = await asyncio.gather(*tasks)
+        results = list(filter(lambda x: x is not None, results))
         posts = [post for posts in results for post in posts if post is not None]
         return posts
 
