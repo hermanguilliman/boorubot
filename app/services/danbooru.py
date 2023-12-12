@@ -55,7 +55,7 @@ class DanbooruService:
                     url=url, headers=self.headers, params=params
                 ) as response:
                     if response.status == 200:
-                        data = await response.json("application/json")
+                        data = await response.json(content_type="application/json")
                         return [DanbooruPost(**post) for post in data]
 
     async def _get_subscriptions(self) -> List | None:
