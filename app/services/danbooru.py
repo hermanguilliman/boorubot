@@ -131,7 +131,7 @@ class DanbooruService:
                             caption=caption,
                             parse_mode=ParseMode.HTML,
                         )
-                    elif post.file_ext in ("mp4", "webm"):
+                    elif post.file_ext in ("mp4", "webm", "zip"):
                         await self.telegram_bot.send_video(
                             chat_id=self.admin_id,
                             video=post.large_file_url,
