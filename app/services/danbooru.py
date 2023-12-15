@@ -121,7 +121,7 @@ class DanbooruService:
         Отправляет новые посты в чат администратора
         """
         for post in new_posts:
-            if hasattr(post, "large_file_url"):
+            if post.large_file_url is not None:
                 try:
                     caption = self._get_post_caption(post)
                     if post.file_ext in ("jpg", "jpeg", "png", "webp"):
