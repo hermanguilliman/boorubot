@@ -1,7 +1,7 @@
 from typing import List
 
 from loguru import logger
-from sqlalchemy import delete
+from sqlalchemy import delete, exc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -32,8 +32,13 @@ class Repo:
             self.session.add(post)
             await self.session.commit()
             return True
+        except exc.IntegrityError:
+            await self.session.rollback()
+            print("Запись уже существует!")
+            return False
         except Exception as e:
-            logger.debug(e)
+            await self.session.rollback()
+            logger.debug(f"Произошла ошибка при добавлении записи: {str(e)}")
             return False
 
     async def add_subscription(self, tags: str) -> bool:
@@ -44,8 +49,13 @@ class Repo:
             await self.session.commit()
             logger.info(f"{tags} - добавлено в подписки")
             return True
+        except exc.IntegrityError:
+            await self.session.rollback()
+            print("Запись уже существует!")
+            return False
         except Exception as e:
-            logger.debug(e)
+            await self.session.rollback()
+            logger.debug(f"Произошла ошибка при добавлении записи: {str(e)}")
             return False
 
     async def delete_sub(self, tags: str) -> bool:
