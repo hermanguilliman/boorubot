@@ -19,7 +19,7 @@ async def add_new_subscribe(
         )
     else:
         await message.answer(
-            f"<b>❌ Не удалось добавить {tags}</b>", parse_mode=ParseMode.HTML
+            f"<b>💡 {tags}? Такая запись уже есть!</b>", parse_mode=ParseMode.HTML
         )
 
     await manager.start(DanMenu.main, mode=StartMode.RESET_STACK)
