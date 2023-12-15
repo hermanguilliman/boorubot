@@ -7,5 +7,5 @@ async def get_subscribes(dialog_manager: DialogManager, **kwargs):
     repo: Repo = dialog_manager.middleware_data.get("repo")
     subs = await repo.get_subscriptions_list()
     return {
-        "tags": subs,
+        "tags": sorted(subs),
     }
