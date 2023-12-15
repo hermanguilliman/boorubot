@@ -50,6 +50,7 @@ class DanbooruService:
         url = f"{self.base_url}/posts.json"
         params = {"tags": tags, "limit": limit}
         async with self.semaphore:
+            await asyncio.sleep(0.5)
             async with self.http_session() as session:
                 async with session.get(
                     url=url, headers=self.headers, params=params
