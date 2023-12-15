@@ -34,7 +34,7 @@ class Repo:
             return True
         except exc.IntegrityError:
             await self.session.rollback()
-            print("Запись уже существует!")
+            logger.debug("Запись уже существует!")
             return False
         except Exception as e:
             await self.session.rollback()
@@ -51,7 +51,7 @@ class Repo:
             return True
         except exc.IntegrityError:
             await self.session.rollback()
-            print("Запись уже существует!")
+            logger.debug("Запись уже существует!")
             return False
         except Exception as e:
             await self.session.rollback()
