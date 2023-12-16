@@ -18,6 +18,7 @@ from app.dialogs.main_dialog import dialog
 from app.filters.is_admin import AdminFilter
 from app.handlers.start import start
 from app.handlers.unknown_errors import on_unknown_intent, on_unknown_state
+from app.middlewares.danbooru import DanbooruMiddleware
 from app.middlewares.repo import RepoMiddleware
 from app.middlewares.scheduler import SchedulerMiddleware
 from app.models.base import Base
@@ -68,6 +69,9 @@ async def main():
     dp.include_router(dialog)
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(sessionmaker))
+    dp.update.middleware(
+        DanbooruMiddleware(sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id))
+    )
     dp.update.middleware(SchedulerMiddleware(scheduler))
     dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))
 

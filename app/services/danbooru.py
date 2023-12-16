@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 from typing import List
-
+from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiohttp import ClientSession
@@ -20,7 +20,9 @@ class DanbooruService:
         admin_id: int,
     ):
         self.base_url = "https://danbooru.donmai.us"
-        self.headers = {"Content-Type": "application/json"}
+        self.headers = {
+            "Content-Type": "application/json",
+            }
         self.http_session = ClientSession
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
@@ -34,11 +36,15 @@ class DanbooruService:
                 data = await response.json()
                 return DanbooruPost(**data)
 
-
-    async def _get_popular_posts(self):
+    async def _get_popular_posts(self, page:int=1, limit:int=10) -> List[DanbooruPost]:
         url = f"{self.base_url}/explore/posts/popular.json"
         today = datetime.now().strftime("%Y-%m-%d")
-        params = {"date": today, "scale": "day", "page": 1}
+        params = {
+            "date": today,
+            "scale": "day",
+            "page": page,
+            "limit": limit,
+        }
         async with self.http_session() as session:
             async with session.get(
                 url, headers=self.headers, params=params
@@ -189,8 +195,30 @@ class DanbooruService:
             logger.info("Подписки не найдены")
         logger.info("Проверка закончена")
 
+    async def _send_popular_posts(self, posts: List[DanbooruPost]):
+        if posts:
+            mg = MediaGroupBuilder()
+            for post in posts:
+                if post.large_file_url and post.file_ext in (
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "webp",
+                ):
+                    caption = self._get_post_caption(post=post)
+                    mg.add_photo(
+                        media=post.large_file_url, caption=caption, parse_mode="HTML"
+                    )
+                elif post.large_file_url and post.file_ext in ("mp4", "webm", "zip"):
+                    mg.add_video(
+                        media=post.large_file_url, caption=caption, parse_mode="HTML"
+                    )
+            await self.telegram_bot.send_media_group(
+                self.admin_id, media=mg.build()
+            )
+
     async def check_popular_posts(self):
         posts = await self._get_popular_posts()
         if posts:
             if len(posts) > 0:
-                await self._send_new_posts(posts)
+                await self._send_popular_posts(posts)
