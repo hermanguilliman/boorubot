@@ -4,6 +4,7 @@ from aiogram_dialog.widgets.kbd import Button, Row, Start, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 
 from app.callbacks.popular_posts import on_popular_click
+from app.callbacks.check_timer import on_check_timer
 from app.callbacks.update_now import on_update_now
 from app.getters.main_window import main_window_getter
 from app.states.danmenu import DanMenu
@@ -19,15 +20,16 @@ main_window = Window(
         SwitchTo(Const("💚 Добавить"), id="add", state=DanMenu.add),
         SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
     ),
-    Button(Const("🤩Популярные посты"), id="popular", on_click=on_popular_click),
     Row(
-        Button(Const("📬 Проверить посты"), id="update_now", on_click=on_update_now),
-        Start(
-            Const("⏲ Обновить таймер"),
-            id="restart",
-            state=DanMenu.main,
-            mode=StartMode.NORMAL,
-        ),
+        Button(Const("📬 Проверить сейчас"), id="update_now", on_click=on_update_now),
+        Button(Const("🤩Популярные посты"), id="popular", on_click=on_popular_click),
+    ),
+    Start(
+        Const("⏲ Время следующего обновления"),
+        id="restart",
+        on_click=on_check_timer,
+        state=DanMenu.main,
+        mode=StartMode.NORMAL,
     ),
     state=DanMenu.main,
     parse_mode=ParseMode.HTML,
