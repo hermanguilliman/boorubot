@@ -111,17 +111,15 @@ class DanbooruService:
 
     @staticmethod
     def _short_caption(caption: str) -> str:
-        if len(caption) > 1024:
-            caption = caption[:1024]
-        return caption
+        return caption[:1024]
 
     def _get_post_caption(self, post: DanbooruPost) -> str:
-        """
-        Создает подпись для поста
-        """
-        caption = f"<b>Создатель:</b> {post.tag_string_artist}\n<b>Персонаж:</b> {post.tag_string_character}\n<b>Копирайт:</b> {post.tag_string_copyright}"
-        caption = DanbooruService._short_caption(caption)
-        return caption
+        caption = (
+            f"<b>Создатель:</b> {post.tag_string_artist}\n"
+            f"<b>Персонаж:</b> {post.tag_string_character}\n"
+            f"<b>Копирайт:</b> {post.tag_string_copyright}"
+        )
+        return self._short_caption(caption)
 
     async def _send_new_posts(self, new_posts: List[DanbooruPost]):
         """
