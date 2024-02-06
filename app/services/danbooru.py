@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List
 from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
 from aiohttp import ClientSession
 from loguru import logger
@@ -152,6 +153,14 @@ class DanbooruService:
                         )
                     else:
                         logger.debug(f"Не знаю что делать с форматом {post.file_ext}")
+                
+                except TelegramBadRequest:
+                    await self.telegram_bot.send_message(
+                        self.admin_id,
+                        f"{post.large_file_url}\n{caption}\n\n<b>Кажется файл слишком большой и не поместился в пост.</b>",
+                        parse_mode=ParseMode.HTML,
+                    )
+                
                 except Exception as e:
                     await self.telegram_bot.send_message(
                         self.admin_id,
