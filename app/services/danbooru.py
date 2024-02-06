@@ -110,17 +110,17 @@ class DanbooruService:
         except Exception as e:
             logger.error(e)
 
-    @staticmethod
-    def _short_caption(caption: str) -> str:
-        return caption[:1024]
-
     def _get_post_caption(self, post: DanbooruPost) -> str:
-        caption = (
-            f"<b>Создатель:</b> {post.tag_string_artist}\n"
-            f"<b>Персонаж:</b> {post.tag_string_character}\n"
-            f"<b>Копирайт:</b> {post.tag_string_copyright}"
+        artist = post.tag_string_artist if post.tag_string_artist else "Неизвестно"
+        character = post.tag_string_character if post.tag_string_character else "Неизвестно"
+        copyright = post.tag_string_copyright if post.tag_string_copyright else "Неизвестно"
+        
+        return (
+            f"<b>Создатель:</b> {artist}\n"
+            f"<b>Персонаж:</b> {character}\n"
+            f"<b>Копирайт:</b> {copyright}"
         )
-        return self._short_caption(caption)
+
 
     async def _send_new_posts(self, new_posts: List[DanbooruPost]):
         """
