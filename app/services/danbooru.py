@@ -133,7 +133,7 @@ class DanbooruService:
         Отправляет новые посты в чат администратора
         """
         for post in new_posts:
-            if post.has_large:
+            if post.large_file_url:
                 try:
                     caption = self._get_post_caption(post)
                     if post.file_ext in ("jpg", "jpeg", "png", "webp"):
@@ -165,11 +165,19 @@ class DanbooruService:
                         )
                         logger.debug(f"Не знаю что делать с форматом {post.file_ext}")
                 except TelegramBadRequest:
-                    await self.telegram_bot.send_message(
-                        self.admin_id,
-                        f"{post.large_file_url}\n{caption}\n\n<b> Этот файл слишком большой! {post.file_size} байт</b>",
-                        parse_mode=ParseMode.HTML,
-                    )
+                    if post.preview_file_url:
+                        await self.telegram_bot.send_photo(
+                            chat_id=self.admin_id,
+                            photo=post.preview_file_url,
+                            caption=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f} мегабайт</b>",
+                            parse_mode=ParseMode.HTML,
+                        )
+                    else:
+                        await self.telegram_bot.send_message(
+                            chat_id=self.admin_id,
+                            text=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f} мегабайт</b>",
+                            parse_mode=ParseMode.HTML,
+                        )
 
                 except Exception as e:
                     await self.telegram_bot.send_message(
