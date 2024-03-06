@@ -121,12 +121,12 @@ class DanbooruService:
         copyright = (
             post.tag_string_copyright if post.tag_string_copyright else "Неизвестно"
         )
-
-        return (
+        caption = (
             f"<b>Создатель:</b> {artist}\n"
             f"<b>Персонаж:</b> {character}\n"
             f"<b>Копирайт:</b> {copyright}"
         )
+        return caption[:1023]
 
     async def _send_new_posts(self, new_posts: List[DanbooruPost]):
         """
