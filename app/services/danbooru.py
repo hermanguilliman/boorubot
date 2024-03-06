@@ -126,7 +126,7 @@ class DanbooruService:
             f"<b>Персонаж:</b> {character}\n"
             f"<b>Копирайт:</b> {copyright}"
         )
-        return caption[:1023]
+        return caption[:1024]
 
     async def _send_new_posts(self, new_posts: List[DanbooruPost]):
         """
