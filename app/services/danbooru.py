@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import List
 from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram.utils.markdown import hlink
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
@@ -121,10 +122,13 @@ class DanbooruService:
         copyright = (
             post.tag_string_copyright if post.tag_string_copyright else "Неизвестно"
         )
+
+        link = hlink("Источник", f"https://danbooru.donmai.us/posts/{post.id}")
         caption = (
             f"<b>Создатель:</b> {artist}\n"
             f"<b>Персонаж:</b> {character}\n"
-            f"<b>Копирайт:</b> {copyright}"
+            f"<b>Копирайт:</b> {copyright}\n"
+            f"<b>{link}</b>"
         )
         return caption[:1024]
 
@@ -169,13 +173,13 @@ class DanbooruService:
                         await self.telegram_bot.send_photo(
                             chat_id=self.admin_id,
                             photo=post.preview_file_url,
-                            caption=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f} мегабайт</b>",
+                            caption=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f}Мб</b>",
                             parse_mode=ParseMode.HTML,
                         )
                     else:
                         await self.telegram_bot.send_message(
                             chat_id=self.admin_id,
-                            text=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f} мегабайт</b>",
+                            text=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f}Мб</b>",
                             parse_mode=ParseMode.HTML,
                         )
 
