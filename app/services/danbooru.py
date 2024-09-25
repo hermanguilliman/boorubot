@@ -175,7 +175,8 @@ class DanbooruService:
                     else:
                         await self.telegram_bot.send_message(
                             self.admin_id,
-                            f"{post.large_file_url}\n{caption}\n\n<b>Я не умею работать с этим файлом.</b>",
+                            f"{post.large_file_url}\n{caption}\n\n"
+                            "<b>Я не умею работать с этим файлом.</b>",
                             parse_mode=ParseMode.HTML,
                         )
                         logger.debug(
@@ -186,20 +187,25 @@ class DanbooruService:
                         await self.telegram_bot.send_photo(
                             chat_id=self.admin_id,
                             photo=post.preview_file_url,
-                            caption=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f}Мб</b>",
+                            caption=f"{post.large_file_url}\n{caption}\n\n"
+                            "<b>Этот файл слишком большой! "
+                            f"{post.file_size/1000000:.2f}Мб</b>",
                             parse_mode=ParseMode.HTML,
                         )
                     else:
                         await self.telegram_bot.send_message(
                             chat_id=self.admin_id,
-                            text=f"{post.large_file_url}\n{caption}\n\n<b>Этот файл слишком большой! {post.file_size/1000000:.2f}Мб</b>",
+                            text=f"{post.large_file_url}\n{caption}\n\n"
+                            "<b>Этот файл слишком большой! "
+                            f"{post.file_size/1000000:.2f}Мб</b>",
                             parse_mode=ParseMode.HTML,
                         )
 
                 except Exception as e:
                     await self.telegram_bot.send_message(
                         self.admin_id,
-                        f"{post.large_file_url}\n{caption}\n\nПроизошла ошибка:\n{e}",
+                        f"{post.large_file_url}\n{caption}\n\n"
+                        f"Произошла ошибка:\n{e}",
                         parse_mode=ParseMode.HTML,
                     )
                 await asyncio.sleep(1)
