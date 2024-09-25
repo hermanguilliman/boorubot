@@ -10,7 +10,11 @@ from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.commands import set_default_commands
 from app.config import logger_setup
@@ -49,9 +53,11 @@ async def main():
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
     await create_schema(engine)
-    sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+    sessionmaker = async_sessionmaker(
+        engine, expire_on_commit=False, autoflush=False
+    )
     storage = MemoryStorage()
-    bot = Bot(token=bot_token, parse_mode="HTML")
+    bot = Bot(token=bot_token)
     dp = Dispatcher(storage=storage)
     danbooru = DanbooruService(sessionmaker, bot, admin_id)
     scheduler = AsyncIOScheduler()
@@ -70,7 +76,9 @@ async def main():
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(sessionmaker))
     dp.update.middleware(
-        DanbooruMiddleware(sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id))
+        DanbooruMiddleware(
+            sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id)
+        )
     )
     dp.update.middleware(SchedulerMiddleware(scheduler))
     dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))

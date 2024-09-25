@@ -1,11 +1,12 @@
 import asyncio
 from datetime import datetime
 from typing import List
-from aiogram.utils.media_group import MediaGroupBuilder
-from aiogram.utils.markdown import hlink
+
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.utils.markdown import hlink
+from aiogram.utils.media_group import MediaGroupBuilder
 from aiohttp import ClientSession
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -67,7 +68,9 @@ class DanbooruService:
                     url=url, headers=self.headers, params=params
                 ) as response:
                     if response.status == 200:
-                        data = await response.json(content_type="application/json")
+                        data = await response.json(
+                            content_type="application/json"
+                        )
                         return [DanbooruPost(**post) for post in data]
                     else:
                         logger.debug(f"Response status: {response.status}")
@@ -81,7 +84,7 @@ class DanbooruService:
     async def _filter_new_posts(
         self, posts: List[DanbooruPost]
     ) -> List[DanbooruPost] | None:
-        # Фильтрует посты, записывая их в бд и возвращает список ссылок на новые
+        # возвращает посты, которые еще не были отправлены
         async with self.database_sessionmaker() as session:
             repo = Repo(session)
             if posts:
@@ -107,7 +110,9 @@ class DanbooruService:
                 new_posts = await self._filter_new_posts(posts=last_posts)
 
                 if new_posts:
-                    logger.info(f"Получено {len(new_posts)} постов, по тегу {tags}")
+                    logger.info(
+                        f"Получено {len(new_posts)} постов, по тегу {tags}"
+                    )
                     return new_posts
             else:
                 return None
@@ -115,12 +120,18 @@ class DanbooruService:
             logger.error(e)
 
     def _get_post_caption(self, post: DanbooruPost) -> str:
-        artist = post.tag_string_artist if post.tag_string_artist else "Неизвестно"
+        artist = (
+            post.tag_string_artist if post.tag_string_artist else "Неизвестно"
+        )
         character = (
-            post.tag_string_character if post.tag_string_character else "Неизвестно"
+            post.tag_string_character
+            if post.tag_string_character
+            else "Неизвестно"
         )
         copyright = (
-            post.tag_string_copyright if post.tag_string_copyright else "Неизвестно"
+            post.tag_string_copyright
+            if post.tag_string_copyright
+            else "Неизвестно"
         )
 
         link = hlink("Источник", f"https://danbooru.donmai.us/posts/{post.id}")
@@ -167,7 +178,9 @@ class DanbooruService:
                             f"{post.large_file_url}\n{caption}\n\n<b>Я не умею работать с этим файлом.</b>",
                             parse_mode=ParseMode.HTML,
                         )
-                        logger.debug(f"Не знаю что делать с форматом {post.file_ext}")
+                        logger.debug(
+                            f"Не знаю что делать с форматом {post.file_ext}"
+                        )
                 except TelegramBadRequest:
                     if post.preview_file_url:
                         await self.telegram_bot.send_photo(
@@ -198,11 +211,15 @@ class DanbooruService:
         tasks = []
 
         for tags in subscriptions:
-            tasks.append(asyncio.create_task(self._get_new_posts_by_tags(tags=tags)))
+            tasks.append(
+                asyncio.create_task(self._get_new_posts_by_tags(tags=tags))
+            )
 
         results = await asyncio.gather(*tasks)
         results = list(filter(lambda x: x is not None, results))
-        posts = [post for posts in results for post in posts if post is not None]
+        posts = [
+            post for posts in results for post in posts if post is not None
+        ]
         return posts
 
     async def check_new_posts(self):
@@ -214,7 +231,9 @@ class DanbooruService:
         subscriptions = await self._get_subscriptions()
 
         if subscriptions:
-            new_posts: List[DanbooruPost] = await self._get_new_posts(subscriptions)
+            new_posts: List[DanbooruPost] = await self._get_new_posts(
+                subscriptions
+            )
 
             if len(new_posts) > 0:
                 await self._send_new_posts(new_posts)
@@ -241,17 +260,26 @@ class DanbooruService:
                 ):
                     caption = self._get_post_caption(post=post)
                     mg.add_photo(
-                        media=post.large_file_url, caption=caption, parse_mode="HTML"
+                        media=post.large_file_url,
+                        caption=caption,
+                        parse_mode="HTML",
                     )
                 elif (
                     post.large_file_url
                     and post.file_size < self.file_size_limit
                     and post.file_ext in ("mp4", "webm", "zip")
                 ):
+                    caption = self._get_post_caption(
+                        post=post
+                    )  # Добавлено эту строку
                     mg.add_video(
-                        media=post.large_file_url, caption=caption, parse_mode="HTML"
+                        media=post.large_file_url,
+                        caption=caption,
+                        parse_mode="HTML",
                     )
-            await self.telegram_bot.send_media_group(self.admin_id, media=mg.build())
+            await self.telegram_bot.send_media_group(
+                self.admin_id, media=mg.build()
+            )
 
     async def check_popular_posts(self):
         posts = await self._get_popular_posts()
