@@ -1048,6 +1048,18 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "pytz"
+version = "2025.1"
+description = "World timezone definitions, modern and historical"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pytz-2025.1-py2.py3-none-any.whl", hash = "sha256:89dd22dca55b46eac6eda23b2d72721bf1bdfef212645d81513ef5d03038de57"},
+    {file = "pytz-2025.1.tar.gz", hash = "sha256:c2db42be2a2518b28e65f9207c4d05e6ff547d1efa4086469ef855e4ab70178e"},
+]
+
+[[package]]
 name = "sqlalchemy"
 version = "2.0.39"
 description = "Database Abstraction Library"
@@ -1302,4 +1314,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "1f0b4147d537b3f392d54979e9dc2074037e33b659db24c6044bba2765ba19ee"
+content-hash = "626a8a1abe1fba0502015aa2c356526e330c0ab455df13610b931701f208bc8d"
