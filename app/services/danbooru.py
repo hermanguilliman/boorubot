@@ -48,11 +48,15 @@ class DanbooruService:
                 if response.status != 200:
                     logger.debug(f"Ошибка получения популярных постов, статус: {response.status}")
                     return []
-                data = await response.json()
+                try:
+                    data = await response.json()
+                except Exception as e:
+                    logger.error(f"Ошибка парсинга JSON: {e}")
+                    return []
                 if not isinstance(data, list):
                     logger.debug(f"Неожиданный формат данных: {data}")
                     return []
-                return [DanbooruPost(**post) for post in data]
+                return [DanbooruPost(**post) for post in data if isinstance(post, dict)]
 
     async def _search_posts(self, tags: str, limit: int = 10) -> List[DanbooruPost]:
         """Ищет посты по тегам с заданным лимитом."""
