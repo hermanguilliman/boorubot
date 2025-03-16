@@ -13,12 +13,12 @@ class Repo:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_subscriptions_list(self) -> List[str] | None:
-        """Получает список всех тегов подписок."""
-        stmt = select(Subscription.tags)
+    async def get_subscriptions_list(self) -> List[tuple[int, str]] | None:
+        """Получает список всех подписок с их ID и тегами."""
+        stmt = select(Subscription.id, Subscription.tags)
         result = await self.session.execute(stmt)
-        tag_list = result.scalars().all()
-        return tag_list or None
+        subscriptions = result.all()  # Возвращает список кортежей (id, tag)
+        return subscriptions or None
 
     async def get_post(self, id: int) -> Post | None:
         """Получает пост по ID."""
@@ -57,15 +57,22 @@ class Repo:
             logger.error(f"Ошибка при добавлении подписки {tags}: {e}")
             return False
 
-    async def delete_sub(self, tags: str) -> bool:
-        """Удаляет подписку по тегам."""
+    async def delete_sub(self, sub_id: int) -> str | None:
+        """Удаляет подписку по ID и возвращает её тег."""
         try:
-            stmt = delete(Subscription).where(Subscription.tags == tags)
-            await self.session.execute(stmt)
+            # Получаем тег подписки
+            stmt = select(Subscription.tags).where(Subscription.id == sub_id)
+            result = await self.session.execute(stmt)
+            tag = result.scalar_one_or_none()
+            
+            if tag is None:
+                return None
+            
+            # Удаляем подписку
+            delete_stmt = delete(Subscription).where(Subscription.id == sub_id)
+            await self.session.execute(delete_stmt)
             await self.session.commit()
-            logger.info(f"Подписка на {tags} удалена")
-            return True
-        except Exception as e:
+            return tag
+        except Exception:
             await self.session.rollback()
-            logger.error(f"Ошибка при удалении подписки {tags}: {e}")
-            return False
+            return None
