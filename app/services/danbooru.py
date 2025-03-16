@@ -75,7 +75,7 @@ class DanbooruService:
                         logger.debug(f"Ошибка поиска постов, статус: {response.status}")
                         return []
 
-    async def _get_subscriptions(self) -> List[str] | None:
+    async def _get_subscriptions(self) -> List[tuple[int, str]] | None:
         """Получает список тегов подписок из базы данных."""
         async with self.database_sessionmaker() as session:
             repo = Repo(session)
@@ -191,14 +191,13 @@ class DanbooruService:
         return posts
 
     async def check_new_posts(self) -> None:
-        """Проверяет наличие новых постов и отправляет их."""
         logger.info("Проверка новых постов")
         subscriptions = await self._get_subscriptions()
         if not subscriptions:
             logger.info("Подписки не найдены")
             return
-
-        new_posts = await self._get_new_posts(subscriptions)
+        tags_list = [sub[1] for sub in subscriptions]  # Extract tags from tuples
+        new_posts = await self._get_new_posts(tags_list)
         if new_posts:
             logger.info(f"Найдено {len(new_posts)} новых постов")
             await self._send_posts(new_posts)
