@@ -38,18 +38,20 @@ class DanbooruService:
                 data = await response.json()
                 return DanbooruPost(**data)
 
-    async def _get_popular_posts(
-        self, page: int = 1, limit: int = 10
-    ) -> List[DanbooruPost]:
+    async def _get_popular_posts(self, page: int = 1, limit: int = 10) -> List[DanbooruPost]:
         """Получает популярные посты за текущий день."""
         url = f"{self.base_url}/explore/posts/popular.json"
         today = datetime.now().strftime("%Y-%m-%d")
         params = {"date": today, "scale": "day", "page": page, "limit": limit}
         async with self.http_session() as session:
-            async with session.get(
-                url, headers=self.headers, params=params
-            ) as response:
+            async with session.get(url, headers=self.headers, params=params) as response:
+                if response.status != 200:
+                    logger.debug(f"Ошибка получения популярных постов, статус: {response.status}")
+                    return []
                 data = await response.json()
+                if not isinstance(data, list):
+                    logger.debug(f"Неожиданный формат данных: {data}")
+                    return []
                 return [DanbooruPost(**post) for post in data]
 
     async def _search_posts(self, tags: str, limit: int = 10) -> List[DanbooruPost]:
