@@ -5,8 +5,7 @@ from typing import List
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.utils.markdown import hlink
-from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiohttp import ClientSession
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -23,17 +22,16 @@ class DanbooruService:
         admin_id: int,
     ):
         self.base_url = "https://danbooru.donmai.us"
-        self.headers = {
-            "Content-Type": "application/json",
-        }
+        self.headers = {"Content-Type": "application/json"}
         self.http_session = ClientSession
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
         self.semaphore = asyncio.Semaphore(5)
-        self.file_size_limit = 1950000
+        self.file_size_limit = 1_950_000  # ~1.95 MB
 
-    async def _get_post(self, post_id):
+    async def _get_post(self, post_id: int) -> DanbooruPost:
+        """Получает пост по его ID."""
         url = f"{self.base_url}/posts/{post_id}.json"
         async with self.http_session() as session:
             async with session.get(url, headers=self.headers) as response:
@@ -43,14 +41,10 @@ class DanbooruService:
     async def _get_popular_posts(
         self, page: int = 1, limit: int = 10
     ) -> List[DanbooruPost]:
+        """Получает популярные посты за текущий день."""
         url = f"{self.base_url}/explore/posts/popular.json"
         today = datetime.now().strftime("%Y-%m-%d")
-        params = {
-            "date": today,
-            "scale": "day",
-            "page": page,
-            "limit": limit,
-        }
+        params = {"date": today, "scale": "day", "page": page, "limit": limit}
         async with self.http_session() as session:
             async with session.get(
                 url, headers=self.headers, params=params
@@ -58,237 +52,160 @@ class DanbooruService:
                 data = await response.json()
                 return [DanbooruPost(**post) for post in data]
 
-    async def _search_posts(self, tags: str, limit=10):
+    async def _search_posts(self, tags: str, limit: int = 10) -> List[DanbooruPost]:
+        """Ищет посты по тегам с заданным лимитом."""
         url = f"{self.base_url}/posts.json"
         params = {"tags": tags, "limit": limit}
         async with self.semaphore:
-            await asyncio.sleep(0.5)
             async with self.http_session() as session:
                 async with session.get(
-                    url=url, headers=self.headers, params=params
+                    url, headers=self.headers, params=params
                 ) as response:
                     if response.status == 200:
-                        data = await response.json(
-                            content_type="application/json"
-                        )
+                        data = await response.json(content_type="application/json")
                         return [DanbooruPost(**post) for post in data]
                     else:
-                        logger.debug(f"Response status: {response.status}")
+                        logger.debug(f"Ошибка поиска постов, статус: {response.status}")
+                        return []
 
-    async def _get_subscriptions(self) -> List | None:
+    async def _get_subscriptions(self) -> List[str] | None:
+        """Получает список тегов подписок из базы данных."""
         async with self.database_sessionmaker() as session:
             repo = Repo(session)
-            subscriptions = await repo.get_subscriptions_list()
-            return subscriptions
+            return await repo.get_subscriptions_list()
 
-    async def _filter_new_posts(
-        self, posts: List[DanbooruPost]
-    ) -> List[DanbooruPost] | None:
-        # возвращает посты, которые еще не были отправлены
+    async def _filter_new_posts(self, posts: List[DanbooruPost]) -> List[DanbooruPost]:
+        """Фильтрует посты, оставляя только те, которых нет в базе данных."""
         async with self.database_sessionmaker() as session:
             repo = Repo(session)
-            if posts:
-                new_posts = []
-                for post in posts:
-                    result = await repo.get_post(post.id)
-                    if result is None:
-                        new_posts.append(post)
-                        await repo.add_post(post.id)
-                return new_posts
-            else:
-                return None
+            new_posts = []
+            for post in posts or []:
+                if await repo.get_post(post.id) is None:
+                    new_posts.append(post)
+                    await repo.add_post(post.id)
+            return new_posts
 
-    async def _get_new_posts_by_tags(
-        self, tags: str = None
-    ) -> List[DanbooruPost] | None:
-        """
-        Возвращает посты, которые еще не были отправлены
-        """
+    async def _get_new_posts_by_tags(self, tags: str) -> List[DanbooruPost]:
+        """Получает новые посты по заданным тегам."""
         try:
-            if tags:
-                last_posts = await self._search_posts(tags=tags)
-                new_posts = await self._filter_new_posts(posts=last_posts)
-
-                if new_posts:
-                    logger.info(
-                        f"Получено {len(new_posts)} постов, по тегу {tags}"
-                    )
-                    return new_posts
-            else:
-                return None
+            last_posts = await self._search_posts(tags=tags)
+            new_posts = await self._filter_new_posts(last_posts)
+            if new_posts:
+                logger.info(f"Найдено {len(new_posts)} новых постов по тегу {tags}")
+            return new_posts
         except Exception as e:
-            logger.error(e)
+            logger.error(f"Ошибка при получении постов по тегу {tags}: {e}")
+            raise
+
+    def _get_source_button(self, post: DanbooruPost) -> InlineKeyboardMarkup:
+        url = f"https://danbooru.donmai.us/posts/{post.id}"
+        button = InlineKeyboardButton(text="Источник", url=url)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[button]])
+        return keyboard
 
     def _get_post_caption(self, post: DanbooruPost) -> str:
-        artist = (
-            post.tag_string_artist if post.tag_string_artist else "Неизвестно"
-        )
-        character = (
-            post.tag_string_character
-            if post.tag_string_character
-            else "Неизвестно"
-        )
-        copyright = (
-            post.tag_string_copyright
-            if post.tag_string_copyright
-            else "Неизвестно"
-        )
-
-        link = hlink("Источник", f"https://danbooru.donmai.us/posts/{post.id}")
-        caption = (
-            f"<b>Создатель:</b> {artist}\n"
-            f"<b>Персонаж:</b> {character}\n"
-            f"<b>Копирайт:</b> {copyright}\n"
-            f"<b>{link}</b>"
-        )
+        """Генерирует подпись для поста с ограничением в 1024 символа."""
+        artist = post.tag_string_artist or "Неизвестно"
+        character = post.tag_string_character or "Неизвестно"
+        copyright = post.tag_string_copyright or "Неизвестно"
+        caption = f"<b>Создатель:</b> {artist}\n<b>Персонаж:</b> {character}\n<b>Копирайт:</b> {copyright}"
         return caption[:1024]
 
-    async def _send_new_posts(self, new_posts: List[DanbooruPost]):
-        """
-        Отправляет новые посты в чат администратора
-        """
-        for post in new_posts:
-            if post.large_file_url:
-                try:
-                    caption = self._get_post_caption(post)
-                    if post.file_ext in ("jpg", "jpeg", "png", "webp"):
-                        await self.telegram_bot.send_photo(
-                            chat_id=self.admin_id,
-                            photo=post.large_file_url,
-                            caption=caption,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    elif post.file_ext in ("mp4", "webm", "zip"):
-                        await self.telegram_bot.send_video(
-                            chat_id=self.admin_id,
-                            video=post.large_file_url,
-                            caption=caption,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    elif post.file_ext == "gif":
-                        await self.telegram_bot.send_animation(
-                            chat_id=self.admin_id,
-                            animation=post.large_file_url,
-                            caption=caption,
-                            parse_mode=ParseMode.HTML,
-                        )
-                    else:
-                        await self.telegram_bot.send_message(
-                            self.admin_id,
-                            f"{post.large_file_url}\n{caption}\n\n"
-                            "<b>Я не умею работать с этим файлом.</b>",
-                            parse_mode=ParseMode.HTML,
-                        )
-                        logger.debug(
-                            f"Не знаю что делать с форматом {post.file_ext}"
-                        )
-                except TelegramBadRequest:
-                    if post.preview_file_url:
-                        await self.telegram_bot.send_photo(
-                            chat_id=self.admin_id,
-                            photo=post.preview_file_url,
-                            caption=f"{post.large_file_url}\n{caption}\n\n"
-                            "<b>Этот файл слишком большой! "
-                            f"{post.file_size/1000000:.2f}Мб</b>",
-                            parse_mode=ParseMode.HTML,
-                        )
-                    else:
-                        await self.telegram_bot.send_message(
-                            chat_id=self.admin_id,
-                            text=f"{post.large_file_url}\n{caption}\n\n"
-                            "<b>Этот файл слишком большой! "
-                            f"{post.file_size/1000000:.2f}Мб</b>",
-                            parse_mode=ParseMode.HTML,
-                        )
-
-                except Exception as e:
+    async def _send_posts(self, posts: List[DanbooruPost]) -> None:
+        """Отправляет посты в чат администратора."""
+        for post in posts:
+            if not post.large_file_url:
+                continue
+            try:
+                caption = self._get_post_caption(post)
+                keyboard = self._get_source_button(post)
+                if post.file_ext in ("jpg", "jpeg", "png", "webp"):
+                    await self.telegram_bot.send_photo(
+                        chat_id=self.admin_id,
+                        photo=post.large_file_url,
+                        caption=caption,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard
+                    )
+                elif post.file_ext in ("mp4", "webm", "zip"):
+                    await self.telegram_bot.send_video(
+                        chat_id=self.admin_id,
+                        video=post.large_file_url,
+                        caption=caption,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard
+                    )
+                elif post.file_ext == "gif":
+                    await self.telegram_bot.send_animation(
+                        chat_id=self.admin_id,
+                        animation=post.large_file_url,
+                        caption=caption,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard
+                    )
+                else:
                     await self.telegram_bot.send_message(
                         self.admin_id,
-                        f"{post.large_file_url}\n{caption}\n\n"
-                        f"Произошла ошибка:\n{e}",
+                        f"{post.large_file_url}\n{caption}\n\n<b>Неподдерживаемый формат файла.</b>",
                         parse_mode=ParseMode.HTML,
                     )
-                await asyncio.sleep(1)
+                    logger.debug(f"Неизвестный формат: {post.file_ext}")
+            except TelegramBadRequest as e:
+                if post.preview_file_url and post.file_size >= self.file_size_limit:
+                    await self.telegram_bot.send_photo(
+                        chat_id=self.admin_id,
+                        photo=post.preview_file_url,
+                        caption=f"{post.large_file_url}\n{caption}\n\n"
+                        f"<b>Файл слишком большой: {post.file_size / 1_000_000:.2f} МБ</b>",
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await self.telegram_bot.send_message(
+                        self.admin_id,
+                        f"{post.large_file_url}\n{caption}\n\n<b>Ошибка Telegram: {e}</b>",
+                        parse_mode=ParseMode.HTML,
+                    )
+            except Exception as e:
+                await self.telegram_bot.send_message(
+                    self.admin_id,
+                    f"{post.large_file_url}\n{caption}\n\n<b>Ошибка: {e}</b>",
+                    parse_mode=ParseMode.HTML,
+                )
+            await asyncio.sleep(0.1)  # Минимальная задержка для соблюдения лимитов
 
-    async def _get_new_posts(self, subscriptions: List) -> List[DanbooruPost]:
-        """
-        Получает новые посты для каждой подписки
-        """
-        tasks = []
-
-        for tags in subscriptions:
-            tasks.append(
-                asyncio.create_task(self._get_new_posts_by_tags(tags=tags))
-            )
-
-        results = await asyncio.gather(*tasks)
-        results = list(filter(lambda x: x is not None, results))
-        posts = [
-            post for posts in results for post in posts if post is not None
-        ]
+    async def _get_new_posts(self, subscriptions: List[str]) -> List[DanbooruPost]:
+        """Собирает новые посты для всех подписок."""
+        tasks = [self._get_new_posts_by_tags(tags) for tags in subscriptions]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        posts = []
+        for result in results:
+            if isinstance(result, list):
+                posts.extend(result)
         return posts
 
-    async def check_new_posts(self):
-        """
-        Получаем свежие посты
-        """
-        logger.info("Проверка новых сообщений")
-
+    async def check_new_posts(self) -> None:
+        """Проверяет наличие новых постов и отправляет их."""
+        logger.info("Проверка новых постов")
         subscriptions = await self._get_subscriptions()
-
-        if subscriptions:
-            new_posts: List[DanbooruPost] = await self._get_new_posts(
-                subscriptions
-            )
-
-            if len(new_posts) > 0:
-                await self._send_new_posts(new_posts)
-            else:
-                logger.info("Новые посты не найдены")
-        else:
+        if not subscriptions:
             logger.info("Подписки не найдены")
-        logger.info("Проверка закончена")
+            return
 
-    async def _send_popular_posts(self, posts: List[DanbooruPost]):
-        if posts:
-            mg = MediaGroupBuilder()
-            for post in posts:
-                if (
-                    post.large_file_url
-                    and post.file_size < self.file_size_limit
-                    and post.file_ext
-                    in (
-                        "jpg",
-                        "jpeg",
-                        "png",
-                        "webp",
-                    )
-                ):
-                    caption = self._get_post_caption(post=post)
-                    mg.add_photo(
-                        media=post.large_file_url,
-                        caption=caption,
-                        parse_mode="HTML",
-                    )
-                elif (
-                    post.large_file_url
-                    and post.file_size < self.file_size_limit
-                    and post.file_ext in ("mp4", "webm", "zip")
-                ):
-                    caption = self._get_post_caption(
-                        post=post
-                    )  # Добавлено эту строку
-                    mg.add_video(
-                        media=post.large_file_url,
-                        caption=caption,
-                        parse_mode="HTML",
-                    )
-            await self.telegram_bot.send_media_group(
-                self.admin_id, media=mg.build()
-            )
+        new_posts = await self._get_new_posts(subscriptions)
+        if new_posts:
+            logger.info(f"Найдено {len(new_posts)} новых постов")
+            await self._send_posts(new_posts)
+        else:
+            logger.info("Новые посты не найдены")
+        logger.info("Проверка завершена")
 
-    async def check_popular_posts(self):
+    async def check_popular_posts(self) -> None:
+        """Проверяет популярные посты и отправляет их."""
+        logger.info("Проверка популярных постов")
         posts = await self._get_popular_posts()
         if posts:
-            if len(posts) > 0:
-                await self._send_popular_posts(posts)
+            logger.info(f"Найдено {len(posts)} популярных постов")
+            await self._send_posts(posts)
+        else:
+            logger.info("Популярные посты не найдены")
+        logger.info("Проверка завершена")

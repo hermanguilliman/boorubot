@@ -14,19 +14,18 @@ class Repo:
         self.session = session
 
     async def get_subscriptions_list(self) -> List[str] | None:
-        # Получение всех подписок
+        """Получает список всех тегов подписок."""
         stmt = select(Subscription.tags)
         result = await self.session.execute(stmt)
         tag_list = result.scalars().all()
-        if tag_list:
-            return tag_list
-        else:
-            return None
+        return tag_list or None
 
     async def get_post(self, id: int) -> Post | None:
+        """Получает пост по ID."""
         return await self.session.get(Post, id)
 
     async def add_post(self, id: int) -> bool:
+        """Добавляет пост в базу данных."""
         try:
             post = Post(id=id)
             self.session.add(post)
@@ -34,33 +33,39 @@ class Repo:
             return True
         except exc.IntegrityError:
             await self.session.rollback()
-            logger.debug("Запись уже существует!")
+            logger.debug(f"Пост с ID {id} уже существует")
             return False
         except Exception as e:
             await self.session.rollback()
-            logger.debug(f"Произошла ошибка при добавлении записи: {str(e)}")
+            logger.error(f"Ошибка при добавлении поста {id}: {e}")
             return False
 
     async def add_subscription(self, tags: str) -> bool:
-        # добавить tags в подписки
+        """Добавляет подписку в базу данных."""
         try:
             sub = Subscription(tags=tags)
             self.session.add(sub)
             await self.session.commit()
-            logger.info(f"{tags} - добавлено в подписки")
+            logger.info(f"Подписка на {tags} добавлена")
             return True
         except exc.IntegrityError:
             await self.session.rollback()
-            logger.debug("Запись уже существует!")
+            logger.debug(f"Подписка на {tags} уже существует")
             return False
         except Exception as e:
             await self.session.rollback()
-            logger.debug(f"Произошла ошибка при добавлении записи: {str(e)}")
+            logger.error(f"Ошибка при добавлении подписки {tags}: {e}")
             return False
 
     async def delete_sub(self, tags: str) -> bool:
-        # Удаляет запись
-        stmt = delete(Subscription).where(Subscription.tags == tags)
-        await self.session.execute(stmt)
-        await self.session.commit()
-        return True
+        """Удаляет подписку по тегам."""
+        try:
+            stmt = delete(Subscription).where(Subscription.tags == tags)
+            await self.session.execute(stmt)
+            await self.session.commit()
+            logger.info(f"Подписка на {tags} удалена")
+            return True
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(f"Ошибка при удалении подписки {tags}: {e}")
+            return False
