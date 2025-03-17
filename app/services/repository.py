@@ -64,10 +64,10 @@ class Repo:
             stmt = select(Subscription.tags).where(Subscription.id == sub_id)
             result = await self.session.execute(stmt)
             tag = result.scalar_one_or_none()
-            
+
             if tag is None:
                 return None
-            
+
             # Удаляем подписку
             delete_stmt = delete(Subscription).where(Subscription.id == sub_id)
             await self.session.execute(delete_stmt)

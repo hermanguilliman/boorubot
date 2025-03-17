@@ -38,15 +38,21 @@ class DanbooruService:
                 data = await response.json()
                 return DanbooruPost(**data)
 
-    async def _get_popular_posts(self, page: int = 1, limit: int = 10) -> List[DanbooruPost]:
+    async def _get_popular_posts(
+        self, page: int = 1, limit: int = 10
+    ) -> List[DanbooruPost]:
         """Получает популярные посты за текущий день."""
         url = f"{self.base_url}/explore/posts/popular.json"
         today = datetime.now().strftime("%Y-%m-%d")
         params = {"date": today, "scale": "day", "page": page, "limit": limit}
         async with self.http_session() as session:
-            async with session.get(url, headers=self.headers, params=params) as response:
+            async with session.get(
+                url, headers=self.headers, params=params
+            ) as response:
                 if response.status != 200:
-                    logger.debug(f"Ошибка получения популярных постов, статус: {response.status}")
+                    logger.debug(
+                        f"Ошибка получения популярных постов, статус: {response.status}"
+                    )
                     return []
                 try:
                     data = await response.json()
@@ -56,9 +62,15 @@ class DanbooruService:
                 if not isinstance(data, list):
                     logger.debug(f"Неожиданный формат данных: {data}")
                     return []
-                return [DanbooruPost(**post) for post in data if isinstance(post, dict)]
+                return [
+                    DanbooruPost(**post)
+                    for post in data
+                    if isinstance(post, dict)
+                ]
 
-    async def _search_posts(self, tags: str, limit: int = 10) -> List[DanbooruPost]:
+    async def _search_posts(
+        self, tags: str, limit: int = 10
+    ) -> List[DanbooruPost]:
         """Ищет посты по тегам с заданным лимитом."""
         url = f"{self.base_url}/posts.json"
         params = {"tags": tags, "limit": limit}
@@ -69,10 +81,14 @@ class DanbooruService:
                     url, headers=self.headers, params=params
                 ) as response:
                     if response.status == 200:
-                        data = await response.json(content_type="application/json")
+                        data = await response.json(
+                            content_type="application/json"
+                        )
                         return [DanbooruPost(**post) for post in data]
                     else:
-                        logger.debug(f"Ошибка поиска постов, статус: {response.status}")
+                        logger.debug(
+                            f"Ошибка поиска постов, статус: {response.status}"
+                        )
                         return []
 
     async def _get_subscriptions(self) -> List[tuple[int, str]] | None:
@@ -81,7 +97,9 @@ class DanbooruService:
             repo = Repo(session)
             return await repo.get_subscriptions_list()
 
-    async def _filter_new_posts(self, posts: List[DanbooruPost]) -> List[DanbooruPost]:
+    async def _filter_new_posts(
+        self, posts: List[DanbooruPost]
+    ) -> List[DanbooruPost]:
         """Фильтрует посты, оставляя только те, которых нет в базе данных."""
         async with self.database_sessionmaker() as session:
             repo = Repo(session)
@@ -98,7 +116,9 @@ class DanbooruService:
             last_posts = await self._search_posts(tags=tags)
             new_posts = await self._filter_new_posts(last_posts)
             if new_posts:
-                logger.info(f"Найдено {len(new_posts)} новых постов по тегу {tags}")
+                logger.info(
+                    f"Найдено {len(new_posts)} новых постов по тегу {tags}"
+                )
             return new_posts
         except Exception as e:
             logger.error(f"Ошибка при получении постов по тегу {tags}: {e}")
@@ -132,7 +152,7 @@ class DanbooruService:
                         photo=post.large_file_url,
                         caption=caption,
                         parse_mode=ParseMode.HTML,
-                        reply_markup=keyboard
+                        reply_markup=keyboard,
                     )
                 elif post.file_ext in ("mp4", "webm", "zip"):
                     await self.telegram_bot.send_video(
@@ -140,7 +160,7 @@ class DanbooruService:
                         video=post.large_file_url,
                         caption=caption,
                         parse_mode=ParseMode.HTML,
-                        reply_markup=keyboard
+                        reply_markup=keyboard,
                     )
                 elif post.file_ext == "gif":
                     await self.telegram_bot.send_animation(
@@ -148,7 +168,7 @@ class DanbooruService:
                         animation=post.large_file_url,
                         caption=caption,
                         parse_mode=ParseMode.HTML,
-                        reply_markup=keyboard
+                        reply_markup=keyboard,
                     )
                 else:
                     await self.telegram_bot.send_message(
@@ -158,7 +178,10 @@ class DanbooruService:
                     )
                     logger.debug(f"Неизвестный формат: {post.file_ext}")
             except TelegramBadRequest as e:
-                if post.preview_file_url and post.file_size >= self.file_size_limit:
+                if (
+                    post.preview_file_url
+                    and post.file_size >= self.file_size_limit
+                ):
                     await self.telegram_bot.send_photo(
                         chat_id=self.admin_id,
                         photo=post.preview_file_url,
@@ -178,9 +201,13 @@ class DanbooruService:
                     f"{post.large_file_url}\n{caption}\n\n<b>Ошибка: {e}</b>",
                     parse_mode=ParseMode.HTML,
                 )
-            await asyncio.sleep(0.1)  # Минимальная задержка для соблюдения лимитов
+            await asyncio.sleep(
+                0.1
+            )  # Минимальная задержка для соблюдения лимитов
 
-    async def _get_new_posts(self, subscriptions: List[str]) -> List[DanbooruPost]:
+    async def _get_new_posts(
+        self, subscriptions: List[str]
+    ) -> List[DanbooruPost]:
         """Собирает новые посты для всех подписок."""
         tasks = [self._get_new_posts_by_tags(tags) for tags in subscriptions]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -196,7 +223,9 @@ class DanbooruService:
         if not subscriptions:
             logger.info("Подписки не найдены")
             return
-        tags_list = [sub[1] for sub in subscriptions]  # Extract tags from tuples
+        tags_list = [
+            sub[1] for sub in subscriptions
+        ]  # Extract tags from tuples
         new_posts = await self._get_new_posts(tags_list)
         if new_posts:
             logger.info(f"Найдено {len(new_posts)} новых постов")
