@@ -1,15 +1,14 @@
 import asyncio
-from datetime import datetime
 from typing import List
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiohttp import ClientSession
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.danbooru_client import DanbooruAPI
 from app.models.danbooru import DanbooruPost
 from app.services.repository import Repo
 
@@ -21,75 +20,11 @@ class DanbooruService:
         bot: Bot,
         admin_id: int,
     ):
-        self.base_url = "https://danbooru.donmai.us"
-        self.headers = {"Content-Type": "application/json"}
-        self.http_session = ClientSession
         self.database_sessionmaker = async_sessionmaker
         self.telegram_bot = bot
         self.admin_id = admin_id
-        self.semaphore = asyncio.Semaphore(5)
         self.file_size_limit = 1_950_000  # ~1.95 MB
-
-    async def _get_post(self, post_id: int) -> DanbooruPost:
-        """Получает пост по его ID."""
-        url = f"{self.base_url}/posts/{post_id}.json"
-        async with self.http_session() as session:
-            async with session.get(url, headers=self.headers) as response:
-                data = await response.json()
-                return DanbooruPost(**data)
-
-    async def _get_popular_posts(
-        self, page: int = 1, limit: int = 10
-    ) -> List[DanbooruPost]:
-        """Получает популярные посты за текущий день."""
-        url = f"{self.base_url}/explore/posts/popular.json"
-        today = datetime.now().strftime("%Y-%m-%d")
-        params = {"date": today, "scale": "day", "page": page, "limit": limit}
-        async with self.http_session() as session:
-            async with session.get(
-                url, headers=self.headers, params=params
-            ) as response:
-                if response.status != 200:
-                    logger.debug(
-                        f"Ошибка получения популярных постов, статус: {response.status}"
-                    )
-                    return []
-                try:
-                    data = await response.json()
-                except Exception as e:
-                    logger.error(f"Ошибка парсинга JSON: {e}")
-                    return []
-                if not isinstance(data, list):
-                    logger.debug(f"Неожиданный формат данных: {data}")
-                    return []
-                return [
-                    DanbooruPost(**post)
-                    for post in data
-                    if isinstance(post, dict)
-                ]
-
-    async def _search_posts(
-        self, tags: str, limit: int = 10
-    ) -> List[DanbooruPost]:
-        """Ищет посты по тегам с заданным лимитом."""
-        url = f"{self.base_url}/posts.json"
-        params = {"tags": tags, "limit": limit}
-        async with self.semaphore:
-            await asyncio.sleep(0.5)
-            async with self.http_session() as session:
-                async with session.get(
-                    url, headers=self.headers, params=params
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json(
-                            content_type="application/json"
-                        )
-                        return [DanbooruPost(**post) for post in data]
-                    else:
-                        logger.debug(
-                            f"Ошибка поиска постов, статус: {response.status}"
-                        )
-                        return []
+        self.api = DanbooruAPI()  # Экземпляр DanbooruAPI
 
     async def _get_subscriptions(self) -> List[tuple[int, str]] | None:
         """Получает список тегов подписок из базы данных."""
@@ -113,7 +48,7 @@ class DanbooruService:
     async def _get_new_posts_by_tags(self, tags: str) -> List[DanbooruPost]:
         """Получает новые посты по заданным тегам."""
         try:
-            last_posts = await self._search_posts(tags=tags)
+            last_posts = await self.api.search_posts(tags=tags)
             new_posts = await self._filter_new_posts(last_posts)
             if new_posts:
                 logger.info(
@@ -203,7 +138,7 @@ class DanbooruService:
                 )
             await asyncio.sleep(
                 0.1
-            )  # Минимальная задержка для соблюдения лимитов
+            )  # Задержка для соблюдения лимитов Telegram
 
     async def _get_new_posts(
         self, subscriptions: List[str]
@@ -223,9 +158,7 @@ class DanbooruService:
         if not subscriptions:
             logger.info("Подписки не найдены")
             return
-        tags_list = [
-            sub[1] for sub in subscriptions
-        ]  # Extract tags from tuples
+        tags_list = [sub[1] for sub in subscriptions]  # Извлекаем теги
         new_posts = await self._get_new_posts(tags_list)
         if new_posts:
             logger.info(f"Найдено {len(new_posts)} новых постов")
@@ -237,7 +170,7 @@ class DanbooruService:
     async def check_popular_posts(self) -> None:
         """Проверяет популярные посты и отправляет их."""
         logger.info("Проверка популярных постов")
-        posts = await self._get_popular_posts()
+        posts = await self.api.get_popular_posts()
         if posts:
             logger.info(f"Найдено {len(posts)} популярных постов")
             await self._send_posts(posts)
