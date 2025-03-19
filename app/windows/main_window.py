@@ -3,7 +3,7 @@ from aiogram_dialog import StartMode, Window
 from aiogram_dialog.widgets.kbd import Button, Row, Start, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 
-from app.callbacks.popular_posts import on_popular_click
+from app.callbacks.check_posts import on_hot_click, on_popular_click
 from app.callbacks.check_timer import on_check_timer
 from app.callbacks.update_now import on_update_now
 from app.getters.main_window import main_window_getter
@@ -11,7 +11,9 @@ from app.states.danmenu import DanMenu
 
 main_window = Window(
     Const("<u><b>boorubot</b></u> 👻"),
-    Format("<b>Активных подписок: <u>{subs_counter}</u></b>", when="subs_counter"),
+    Format(
+        "<b>Активных подписок: <u>{subs_counter}</u></b>", when="subs_counter"
+    ),
     Format(
         "<b>Минут до следующего обновления: <u>{minutes_until_next_update}</u></b>",
         when="minutes_until_next_update",
@@ -20,9 +22,18 @@ main_window = Window(
         SwitchTo(Const("💚 Добавить"), id="add", state=DanMenu.add),
         SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
     ),
+    Button(
+        Const("📬 Запустить проверку новых постов"),
+        id="update_now",
+        on_click=on_update_now,
+    ),
     Row(
-        Button(Const("📬 Проверить сейчас"), id="update_now", on_click=on_update_now),
-        Button(Const("🤩Популярные посты"), id="popular", on_click=on_popular_click),
+        Button(
+            Const("⭐️ Популярные"),
+            id="popular",
+            on_click=on_popular_click,
+        ),
+        Button(Const("🌶 Горячие"), id="hot", on_click=on_hot_click),
     ),
     Start(
         Const("⏲ Время следующего обновления"),

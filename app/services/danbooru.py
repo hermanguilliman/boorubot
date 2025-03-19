@@ -177,3 +177,14 @@ class DanbooruService:
         else:
             logger.info("Популярные посты не найдены")
         logger.info("Проверка завершена")
+
+    async def check_hot_posts(self) -> None:
+        """Проверяет популярные посты и отправляет их."""
+        logger.info("Проверка горячих постов")
+        posts = await self.api.get_hot_posts()
+        if posts:
+            logger.info(f"Найдено {len(posts)} горячих постов")
+            await self._send_posts(posts)
+        else:
+            logger.info("Горячие посты не найдены")
+        logger.info("Проверка завершена")

@@ -30,7 +30,7 @@ class DanbooruAPI:
                             content_type="application/json"
                         )
                     elif response.status == 429:
-                        wait_time = 2**attempt  # Экспоненциальная задержка
+                        wait_time = 2**attempt
                         logger.debug(
                             f"Ошибка 429, повторная попытка через {wait_time} секунд"
                         )
@@ -58,6 +58,17 @@ class DanbooruAPI:
         url = f"{self.base_url}/explore/posts/popular.json"
         today = datetime.now().strftime("%Y-%m-%d")
         params = {"date": today, "scale": "day", "page": page, "limit": limit}
+        data = await self._make_request(url, params)
+        if data and isinstance(data, list):
+            return [
+                DanbooruPost(**post) for post in data if isinstance(post, dict)
+            ]
+        return []
+
+    async def get_hot_posts(self) -> List[DanbooruPost]:
+        """Получает горячие посты."""
+        url = f"{self.base_url}/posts.json"
+        params = {"d": 1, "tags": "order:rank", "limit": 10}
         data = await self._make_request(url, params)
         if data and isinstance(data, list):
             return [
