@@ -2,11 +2,10 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart, ExceptionTypeFilter
+from aiogram.filters import CommandStart
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.methods import DeleteWebhook
 from aiogram_dialog import setup_dialogs
-from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from loguru import logger
@@ -21,7 +20,6 @@ from app.config import logger_setup
 from app.dialogs.main_dialog import dialog
 from app.filters.is_admin import AdminFilter
 from app.handlers.start import start
-from app.handlers.unknown_errors import on_unknown_intent, on_unknown_state
 from app.middlewares.danbooru import DanbooruMiddleware
 from app.middlewares.repo import RepoMiddleware
 from app.middlewares.scheduler import SchedulerMiddleware
@@ -53,9 +51,7 @@ async def main():
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
     await create_schema(engine)
-    sessionmaker = async_sessionmaker(
-        engine, expire_on_commit=False, autoflush=False
-    )
+    sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
     storage = MemoryStorage()
     bot = Bot(token=bot_token)
     dp = Dispatcher(storage=storage)
@@ -63,22 +59,11 @@ async def main():
     scheduler = AsyncIOScheduler()
     await set_default_commands(bot)
 
-    dp.errors.register(
-        on_unknown_intent,
-        ExceptionTypeFilter(UnknownIntent),
-    )
-    dp.errors.register(
-        on_unknown_state,
-        ExceptionTypeFilter(UnknownState),
-    )
-
     dp.include_router(dialog)
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(sessionmaker))
     dp.update.middleware(
-        DanbooruMiddleware(
-            sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id)
-        )
+        DanbooruMiddleware(sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id))
     )
     dp.update.middleware(SchedulerMiddleware(scheduler))
     dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))
