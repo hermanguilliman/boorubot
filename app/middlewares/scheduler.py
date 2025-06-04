@@ -3,7 +3,9 @@ from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from app.services.schedules import Schedules
+
 
 class SchedulerMiddleware(BaseMiddleware):
     def __init__(self, scheduler: AsyncIOScheduler):

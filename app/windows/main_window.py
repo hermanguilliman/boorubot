@@ -22,10 +22,19 @@ main_window = Window(
         SwitchTo(Const("💚 Добавить"), id="add", state=DanMenu.add),
         SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
     ),
-    Button(
-        Const("📬 Запустить проверку новых постов"),
-        id="update_now",
-        on_click=on_update_now,
+    Row(
+        Start(
+            Const("⏲ Обновить таймер"),
+            id="restart",
+            on_click=on_check_timer,
+            state=DanMenu.main,
+            mode=StartMode.NORMAL,
+        ),
+        Button(
+            Const("📬 Проверить сейчас"),
+            id="update_now",
+            on_click=on_update_now,
+        ),
     ),
     Row(
         Button(
@@ -34,13 +43,6 @@ main_window = Window(
             on_click=on_popular_click,
         ),
         Button(Const("🌶 Горячие"), id="hot", on_click=on_hot_click),
-    ),
-    Start(
-        Const("⏲ Время следующего обновления"),
-        id="restart",
-        on_click=on_check_timer,
-        state=DanMenu.main,
-        mode=StartMode.NORMAL,
     ),
     state=DanMenu.main,
     parse_mode=ParseMode.HTML,

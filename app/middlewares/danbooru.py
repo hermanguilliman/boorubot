@@ -9,7 +9,10 @@ from app.services.danbooru import DanbooruService
 
 class DanbooruMiddleware(BaseMiddleware):
     def __init__(
-        self, sessionmaker: async_sessionmaker[AsyncSession], bot: Bot, admin_id: int
+        self,
+        sessionmaker: async_sessionmaker[AsyncSession],
+        bot: Bot,
+        admin_id: int,
     ):
         self.async_sessionmaker = sessionmaker
         self.bot = bot

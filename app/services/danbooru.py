@@ -24,7 +24,21 @@ class DanbooruService:
         self.telegram_bot = bot
         self.admin_id = admin_id
         self.file_size_limit = 1_950_000  # ~1.95 MB
-        self.api = DanbooruAPI()  # Экземпляр DanbooruAPI
+        self.api = DanbooruAPI()
+        self.server_error_cooldown = 300
+
+    async def _notify_admin(self, message: str) -> None:
+        """Отправляет уведомление администратору."""
+        try:
+            await self.telegram_bot.send_message(
+                self.admin_id,
+                message,
+                parse_mode=ParseMode.HTML,
+            )
+        except Exception as e:
+            logger.error(
+                f"Ошибка при отправке уведомления администратору: {e}"
+            )
 
     async def _get_subscriptions(self) -> List[tuple[int, str]] | None:
         """Получает список тегов подписок из базы данных."""
@@ -49,6 +63,15 @@ class DanbooruService:
         """Получает новые посты по заданным тегам."""
         try:
             last_posts = await self.api.search_posts(tags=tags)
+            if last_posts is None:  # Проверка на ошибку сервера
+                logger.warning(
+                    f"Сервер Danbooru недоступен для тега {tags}, пропускаем"
+                )
+                await self._notify_admin(
+                    f"<b>Ошибка:</b> Сервер Danbooru недоступен для тега {tags}. Проверка приостановлена на {self.server_error_cooldown // 60} минут."
+                )
+                await asyncio.sleep(self.server_error_cooldown)
+                return []
             new_posts = await self._filter_new_posts(last_posts)
             if new_posts:
                 logger.info(
@@ -57,7 +80,10 @@ class DanbooruService:
             return new_posts
         except Exception as e:
             logger.error(f"Ошибка при получении постов по тегу {tags}: {e}")
-            raise
+            await self._notify_admin(
+                f"<b>Ошибка:</b> Не удалось получить посты по тегу {tags}: {e}"
+            )
+            return []
 
     def _get_source_button(self, post: DanbooruPost) -> InlineKeyboardMarkup:
         url = f"https://danbooru.donmai.us/posts/{post.id}"
@@ -158,7 +184,7 @@ class DanbooruService:
         if not subscriptions:
             logger.info("Подписки не найдены")
             return
-        tags_list = [sub[1] for sub in subscriptions]  # Извлекаем теги
+        tags_list = [sub[1] for sub in subscriptions]
         new_posts = await self._get_new_posts(tags_list)
         if new_posts:
             logger.info(f"Найдено {len(new_posts)} новых постов")
@@ -171,6 +197,15 @@ class DanbooruService:
         """Проверяет популярные посты и отправляет их."""
         logger.info("Проверка популярных постов")
         posts = await self.api.get_popular_posts()
+        if posts is None:  # Проверка на ошибку сервера
+            logger.warning(
+                "Сервер Danbooru недоступен, пропускаем проверку популярных постов"
+            )
+            await self._notify_admin(
+                f"<b>Ошибка:</b> Сервер Danbooru недоступен для популярных постов. Проверка приостановлена на {self.server_error_cooldown // 60} минут."
+            )
+            await asyncio.sleep(self.server_error_cooldown)
+            return
         if posts:
             logger.info(f"Найдено {len(posts)} популярных постов")
             await self._send_posts(posts)
@@ -179,9 +214,18 @@ class DanbooruService:
         logger.info("Проверка завершена")
 
     async def check_hot_posts(self) -> None:
-        """Проверяет популярные посты и отправляет их."""
+        """Проверяет горячие посты и отправляет их."""
         logger.info("Проверка горячих постов")
         posts = await self.api.get_hot_posts()
+        if posts is None:  # Проверка на ошибку сервера
+            logger.warning(
+                "Сервер Danbooru недоступен, пропускаем проверку горячих постов"
+            )
+            await self._notify_admin(
+                f"<b>Ошибка:</b> Сервер Danbooru недоступен для горячих постов. Проверка приостановлена на {self.server_error_cooldown // 60} минут."
+            )
+            await asyncio.sleep(self.server_error_cooldown)
+            return
         if posts:
             logger.info(f"Найдено {len(posts)} горячих постов")
             await self._send_posts(posts)

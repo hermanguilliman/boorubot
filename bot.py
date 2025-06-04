@@ -51,7 +51,9 @@ async def main():
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
     await create_schema(engine)
-    sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+    sessionmaker = async_sessionmaker(
+        engine, expire_on_commit=False, autoflush=False
+    )
     storage = MemoryStorage()
     bot = Bot(token=bot_token)
     dp = Dispatcher(storage=storage)
@@ -63,7 +65,9 @@ async def main():
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(sessionmaker))
     dp.update.middleware(
-        DanbooruMiddleware(sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id))
+        DanbooruMiddleware(
+            sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id)
+        )
     )
     dp.update.middleware(SchedulerMiddleware(scheduler))
     dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))
