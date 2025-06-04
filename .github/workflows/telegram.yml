@@ -9,10 +9,11 @@ jobs:
     steps:
       - name: Send Telegram Message
         run: |
-          msg_text="New commit in ${{ github.repository }} by ${{ github.actor }}:
-          Commit: ${{ github.event.head_commit.message }}
-          SHA: ${{ github.sha }}
-          See changes: https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          msg_text="**Новый коммит** в ${{ github.repository }}
+          **Автор**: ${{ github.actor }}:
+          **Коммит**: ${{ github.event.head_commit.message }}
+          **SHA**: ${{ github.sha }}
+          **Изменения**: https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
           
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
