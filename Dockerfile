@@ -1,10 +1,16 @@
-FROM python:3.13-slim
+FROM python:3.13-alpine
 
-WORKDIR /app
-COPY poetry.lock pyproject.toml /app/
+RUN apk update
+
+WORKDIR /boorubot
+
 RUN pip install --upgrade pip --root-user-action=ignore && \
-    pip install --no-cache-dir poetry --root-user-action=ignore && \
-    poetry config virtualenvs.create false && \
-    poetry install --only main --no-root --no-interaction --no-ansi
-COPY . /app
+    pip install --no-cache-dir poetry
+
+COPY poetry.lock pyproject.toml /boorubot/
+
+RUN poetry config virtualenvs.create false && \
+    poetry install --only main --no-root --no-ansi --no-cache --no-interaction
+
+COPY . /boorubot
 CMD ["python", "bot.py"]
