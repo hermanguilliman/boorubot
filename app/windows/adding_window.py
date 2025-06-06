@@ -8,10 +8,10 @@ from app.handlers.subscribes import add_new_subscribe
 from app.states.danmenu import DanMenu
 
 adding_window = Window(
-    Const("<b>Введите один или несколько тэгов через пробел:</b>"),
+    Const("<b>Введите один или несколько Danbooru тэгов через пробел</b>"),
     MessageInput(add_new_subscribe, content_types=[ContentType.TEXT]),
     Back(
-        Const("Назад"),
+        Const("👈 Назад"),
     ),
     state=DanMenu.add,
     parse_mode=ParseMode.HTML,
