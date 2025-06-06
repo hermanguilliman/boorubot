@@ -19,12 +19,12 @@ main_window = Window(
         when="minutes_until_next_update",
     ),
     Row(
-        SwitchTo(Const("💚 Добавить"), id="add", state=DanMenu.add),
+        SwitchTo(Const("💌 Добавить"), id="add", state=DanMenu.add),
         SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
     ),
     Row(
         Start(
-            Const("⏲ Обновить таймер"),
+            Const("⏰ Обновить таймер"),
             id="restart",
             on_click=on_check_timer,
             state=DanMenu.main,
@@ -38,7 +38,7 @@ main_window = Window(
     ),
     Row(
         Button(
-            Const("⭐️ Популярные"),
+            Const("🚀 Популярные"),
             id="popular",
             on_click=on_popular_click,
         ),
