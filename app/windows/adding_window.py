@@ -4,7 +4,7 @@ from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Back
 from aiogram_dialog.widgets.text import Const
 
-from app.handlers.add_subscribe import add_new_subscribe
+from app.handlers.subscribes import add_new_subscribe
 from app.states.danmenu import DanMenu
 
 adding_window = Window(

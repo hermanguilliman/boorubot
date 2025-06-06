@@ -81,7 +81,7 @@ async def main():
     )
     scheduler.start()
 
-    logger.debug("Бот запущен")
+    logger.debug("boorubot 👻 запущен!")
     await bot(DeleteWebhook(drop_pending_updates=True))
     await dp.start_polling(bot)
 

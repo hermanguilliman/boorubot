@@ -1,5 +1,3 @@
-from typing import List
-
 from loguru import logger
 from sqlalchemy import delete, exc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +11,22 @@ class Repo:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_subscriptions_list(self) -> List[tuple[int, str]] | None:
+    async def get_subscriptions_list(self) -> list[tuple[int, str]] | None:
         """Получает список всех подписок с их ID и тегами."""
         stmt = select(Subscription.id, Subscription.tags)
         result = await self.session.execute(stmt)
         subscriptions = result.all()  # Возвращает список кортежей (id, tag)
+        return subscriptions or None
+
+    async def search_subscribes_by_tags(
+        self, tags: str
+    ) -> list[tuple[int, str]] | None:
+        """Получает список подписок по тегам"""
+        stmt = select(Subscription.id, Subscription.tags)
+        if tags:
+            stmt = stmt.where(Subscription.tags.ilike(f"%{tags}%"))
+        result = await self.session.execute(stmt)
+        subscriptions = result.all()
         return subscriptions or None
 
     async def get_post(self, id: int) -> Post | None:

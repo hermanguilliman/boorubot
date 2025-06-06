@@ -19,7 +19,15 @@ async def add_new_subscribe(
         )
     else:
         await message.answer(
-            f"<b>💡 {tags}? Такая запись уже есть!</b>", parse_mode=ParseMode.HTML
+            f"<b>💡 {tags}? Такая запись уже есть!</b>",
+            parse_mode=ParseMode.HTML,
         )
 
     await manager.start(DanMenu.main, mode=StartMode.RESET_STACK)
+
+
+async def search_subscribes(
+    message: Message, message_input: MessageInput, manager: DialogManager
+):
+    tags = message.text
+    manager.dialog_data["search_query"] = tags
