@@ -6,7 +6,7 @@ from app.services.repository import Repo
 from app.states.danmenu import DanMenu
 
 
-async def on_subscibe_deleted(
+async def on_subscribing_deleted(
     callback: ChatEvent, select: Any, manager: DialogManager, item_id: str
 ):
     repo: Repo = manager.middleware_data.get("repo")

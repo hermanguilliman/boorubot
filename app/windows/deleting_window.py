@@ -3,10 +3,9 @@ from aiogram_dialog import StartMode, Window
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Start
 from aiogram_dialog.widgets.text import Const, Format
 
-from app.callbacks.delete_subscribe import on_subscibe_deleted
+from app.callbacks.delete_subscribe import on_subscribing_deleted
 from app.getters.subscribes_selector import get_subscribes
 from app.states.danmenu import DanMenu
-
 
 deleting_window = Window(
     Const("<b>Выберите подписку которую нужно удалить:</b>"),
@@ -16,7 +15,7 @@ deleting_window = Window(
             items="subscriptions",  # Список кортежей (id, tag)
             item_id_getter=lambda x: x[0],  # ID как callback_data
             id="select_subscriptions",
-            on_click=on_subscibe_deleted,
+            on_click=on_subscribing_deleted,
         ),
         width=2,
         height=10,
