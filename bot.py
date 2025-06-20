@@ -75,9 +75,7 @@ async def main():
     logger_setup()
 
     scheduler.add_job(
-        danbooru.check_new_posts,
-        "interval",
-        hours=1,
+        danbooru.check_new_posts, "interval", hours=1, max_instances=1
     )
     scheduler.start()
 
