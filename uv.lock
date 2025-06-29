@@ -165,7 +165,7 @@ wheels = [
 [[package]]
 name = "danboorubot"
 version = "6.6.6"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "aiogram" },
     { name = "aiogram-dialog" },
@@ -178,6 +178,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pytz" },
     { name = "sqlalchemy" },
+    { name = "tzdata" },
 ]
 
 [package.dev-dependencies]
@@ -198,6 +199,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0,<2" },
     { name = "pytz", specifier = "~=2025.1" },
     { name = "sqlalchemy", specifier = ">=2.0.22,<3" },
+    { name = "tzdata", specifier = ">=2025.2" },
 ]
 
 [package.metadata.requires-dev]

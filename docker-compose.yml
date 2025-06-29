@@ -1,5 +1,5 @@
 services:
-  bot:
+  boorubot:
     container_name: boorubot 
     build:
       context: .
