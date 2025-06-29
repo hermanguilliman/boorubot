@@ -6,9 +6,6 @@ COPY uv.lock pyproject.toml /boorubot/
 
 RUN uv pip install --system --no-cache-dir -r <(uv export --no-hashes)
 
-COPY ./bot.py /boorubot/bot.py
-COPY ./app /boorubot/app
-COPY ./database /boorubot/database
-
+COPY . /boorubot/
 
 CMD ["python", "bot.py"]

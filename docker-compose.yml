@@ -7,6 +7,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./database/db.sqlite:/app/database/db.sqlite
+      - ./database:/app/database
       - ./logs:/app/logs
     command: ["python", "bot.py"]
