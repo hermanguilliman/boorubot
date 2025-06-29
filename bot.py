@@ -49,7 +49,7 @@ async def main():
         exit()
 
     url = "sqlite+aiosqlite:///database/db.sqlite"
-    engine = create_async_engine(url, echo=False, future=True)
+    engine = create_async_engine(url, echo=True, future=True)
     await create_schema(engine)
     sessionmaker = async_sessionmaker(
         engine, expire_on_commit=False, autoflush=False

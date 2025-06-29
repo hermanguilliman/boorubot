@@ -8,4 +8,6 @@ RUN uv pip install --system --no-cache-dir -r <(uv export --no-hashes)
 
 COPY . /boorubot/
 
-CMD ["python", "bot.py"]
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
