@@ -8,6 +8,7 @@ RUN uv pip install --system --no-cache-dir -r <(uv export --no-hashes)
 
 COPY ./bot.py /boorubot/bot.py
 COPY ./app /boorubot/app
+COPY ./database /boorubot/database
 
 
 CMD ["python", "bot.py"]
