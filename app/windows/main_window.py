@@ -3,7 +3,10 @@ from aiogram_dialog import StartMode, Window
 from aiogram_dialog.widgets.kbd import Button, Row, Start, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 
-from app.callbacks.check_posts import on_hot_click, on_popular_click
+from app.callbacks.check_posts import (
+    on_hot_click,
+    on_popular_click,
+)
 from app.callbacks.check_timer import on_check_timer
 from app.callbacks.update_now import on_update_now
 from app.getters.main_window import main_window_getter

@@ -86,10 +86,10 @@ class DanbooruAPI:
             ]
         return []
 
-    async def get_hot_posts(self) -> List[DanbooruPost]:
+    async def get_hot_posts(self, limit: int = 10) -> List[DanbooruPost]:
         """Получает горячие посты."""
         url = f"{self.base_url}/posts.json"
-        params = {"d": 1, "tags": "order:rank", "limit": 10}
+        params = {"d": 1, "tags": "order:rank", "limit": limit}
         data = await self._make_request(url, params)
         if data and isinstance(data, list):
             return [

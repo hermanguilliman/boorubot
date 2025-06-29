@@ -10,6 +10,7 @@ async def on_popular_click(
 ):
     danbooru: DanbooruService = manager.middleware_data.get("danbooru")
     await danbooru.check_popular_posts()
+    await callback.answer("🚀 Получены популярные посты")
 
 
 async def on_hot_click(
@@ -17,3 +18,4 @@ async def on_hot_click(
 ):
     danbooru: DanbooruService = manager.middleware_data.get("danbooru")
     await danbooru.check_hot_posts()
+    await callback.answer("🌶 Получены горячие посты")

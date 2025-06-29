@@ -51,22 +51,22 @@ async def main():
     url = "sqlite+aiosqlite:///database/db.sqlite"
     engine = create_async_engine(url, echo=False, future=True)
     await create_schema(engine)
-    sessionmaker = async_sessionmaker(
+    session_pool = async_sessionmaker(
         engine, expire_on_commit=False, autoflush=False
     )
     storage = MemoryStorage()
     bot = Bot(token=bot_token)
     dp = Dispatcher(storage=storage)
-    danbooru = DanbooruService(sessionmaker, bot, admin_id)
+    danbooru = DanbooruService(session_pool, bot, admin_id)
     scheduler = AsyncIOScheduler()
     await set_default_commands(bot)
 
     dp.include_router(dialog)
     setup_dialogs(dp)
-    dp.update.middleware(RepoMiddleware(sessionmaker))
+    dp.update.middleware(RepoMiddleware(session_pool))
     dp.update.middleware(
         DanbooruMiddleware(
-            sessionmaker=sessionmaker, bot=bot, admin_id=int(admin_id)
+            session_pool=session_pool, bot=bot, admin_id=int(admin_id)
         )
     )
     dp.update.middleware(SchedulerMiddleware(scheduler))

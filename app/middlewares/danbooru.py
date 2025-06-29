@@ -10,11 +10,11 @@ from app.services.danbooru import DanbooruService
 class DanbooruMiddleware(BaseMiddleware):
     def __init__(
         self,
-        sessionmaker: async_sessionmaker[AsyncSession],
+        session_pool: async_sessionmaker[AsyncSession],
         bot: Bot,
         admin_id: int,
     ):
-        self.async_sessionmaker = sessionmaker
+        self.session_pool = session_pool
         self.bot = bot
         self.admin_id = admin_id
 
@@ -25,7 +25,7 @@ class DanbooruMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         data["danbooru"] = DanbooruService(
-            async_sessionmaker=self.async_sessionmaker,
+            session_pool=self.session_pool,
             bot=self.bot,
             admin_id=self.admin_id,
         )

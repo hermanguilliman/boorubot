@@ -16,11 +16,11 @@ from app.services.repository import Repo
 class DanbooruService:
     def __init__(
         self,
-        async_sessionmaker: async_sessionmaker[AsyncSession],
+        session_pool: async_sessionmaker[AsyncSession],
         bot: Bot,
         admin_id: int,
     ):
-        self.database_sessionmaker = async_sessionmaker
+        self.session_pool = session_pool
         self.telegram_bot = bot
         self.admin_id = admin_id
         self.file_size_limit = 1_950_000  # ~1.95 MB
@@ -42,7 +42,7 @@ class DanbooruService:
 
     async def _get_subscriptions(self) -> List[tuple[int, str]] | None:
         """Получает список тегов подписок из базы данных."""
-        async with self.database_sessionmaker() as session:
+        async with self.session_pool() as session:
             repo = Repo(session)
             return await repo.get_subscriptions_list()
 
@@ -50,7 +50,7 @@ class DanbooruService:
         self, posts: List[DanbooruPost]
     ) -> List[DanbooruPost]:
         """Фильтрует посты, оставляя только те, которых нет в базе данных."""
-        async with self.database_sessionmaker() as session:
+        async with self.session_pool() as session:
             repo = Repo(session)
             new_posts = []
             for post in posts or []:
@@ -138,6 +138,7 @@ class DanbooruService:
                         parse_mode=ParseMode.HTML,
                     )
                     logger.debug(f"Неизвестный формат: {post.file_ext}")
+                await asyncio.sleep(0.5)
             except TelegramBadRequest as e:
                 if (
                     post.preview_file_url
@@ -163,7 +164,7 @@ class DanbooruService:
                     parse_mode=ParseMode.HTML,
                 )
             await asyncio.sleep(
-                0.1
+                0.5
             )  # Задержка для соблюдения лимитов Telegram
 
     async def _get_new_posts(
@@ -202,9 +203,8 @@ class DanbooruService:
                 "Сервер Danbooru недоступен, пропускаем проверку популярных постов"
             )
             await self._notify_admin(
-                f"<b>Ошибка:</b> Сервер Danbooru недоступен для популярных постов. Проверка приостановлена на {self.server_error_cooldown // 60} минут."
+                "<b>Ошибка:</b> Сервер Danbooru недоступен для популярных постов."
             )
-            await asyncio.sleep(self.server_error_cooldown)
             return
         if posts:
             logger.info(f"Найдено {len(posts)} популярных постов")
@@ -222,9 +222,8 @@ class DanbooruService:
                 "Сервер Danbooru недоступен, пропускаем проверку горячих постов"
             )
             await self._notify_admin(
-                f"<b>Ошибка:</b> Сервер Danbooru недоступен для горячих постов. Проверка приостановлена на {self.server_error_cooldown // 60} минут."
+                "<b>Ошибка:</b> Сервер Danbooru недоступен для горячих постов."
             )
-            await asyncio.sleep(self.server_error_cooldown)
             return
         if posts:
             logger.info(f"Найдено {len(posts)} горячих постов")
