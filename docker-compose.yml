@@ -7,6 +7,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./database:/app/database
-      - ./logs:/app/logs
+      - ./database:/boorubot/database
+      - ./logs:/boorubot/logs
     command: ["python", "bot.py"]
