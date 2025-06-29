@@ -1,16 +1,11 @@
-FROM python:3.13-alpine
-
-RUN apk update
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
 WORKDIR /boorubot
 
-RUN pip install --upgrade pip --root-user-action=ignore && \
-    pip install --no-cache-dir poetry
+COPY pyproject.toml /boorubot/
 
-COPY poetry.lock pyproject.toml /boorubot/
-
-RUN poetry config virtualenvs.create false && \
-    poetry install --only main --no-root --no-ansi --no-cache --no-interaction
+RUN uv pip install --system --no-cache-dir -r <(uv export --no-hashes)
 
 COPY . /boorubot
+
 CMD ["python", "bot.py"]
