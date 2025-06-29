@@ -3,6 +3,7 @@ from aiogram.enums import ContentType, ParseMode
 from aiogram_dialog import Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import (
+    Button,
     Row,
     ScrollingGroup,
     Select,
@@ -11,6 +12,7 @@ from aiogram_dialog.widgets.kbd import (
 )
 from aiogram_dialog.widgets.text import Const, Format
 
+from app.callbacks.clear_filter import on_clear_filter
 from app.callbacks.delete_subscribe import on_select_sub
 from app.getters.subscribes_selector import get_subscribes
 from app.handlers.subscribes import search_subscribes
@@ -60,6 +62,12 @@ sublist_window = Window(
         height=10,
         id="scrolling_tags",
         when="subscriptions",  # Показывать, если есть подписки
+    ),
+    Button(
+        Const("🧹 Очистить поисковый фильтр"),
+        id="clear_filter",
+        on_click=on_clear_filter,
+        when=F["dialog_data"]["search_query"],
     ),
     Row(
         Start(
