@@ -22,8 +22,11 @@ main_window = Window(
         when="minutes_until_next_update",
     ),
     Row(
-        SwitchTo(Const("💌 Добавить"), id="add", state=DanMenu.add),
-        SwitchTo(Const("🗑 Удалить"), id="delete", state=DanMenu.delete),
+        SwitchTo(
+            Const("📔 Управление подписками"),
+            id="sublist",
+            state=DanMenu.sub_list,
+        ),
     ),
     Row(
         Start(

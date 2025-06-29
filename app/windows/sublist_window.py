@@ -1,16 +1,22 @@
 from aiogram import F
 from aiogram.enums import ContentType, ParseMode
-from aiogram_dialog import StartMode, Window
+from aiogram_dialog import Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Start
+from aiogram_dialog.widgets.kbd import (
+    Row,
+    ScrollingGroup,
+    Select,
+    Start,
+    SwitchTo,
+)
 from aiogram_dialog.widgets.text import Const, Format
 
-from app.callbacks.delete_subscribe import on_subscribing_deleted
+from app.callbacks.delete_subscribe import on_select_sub
 from app.getters.subscribes_selector import get_subscribes
 from app.handlers.subscribes import search_subscribes
 from app.states.danmenu import DanMenu
 
-deleting_window = Window(
+sublist_window = Window(
     # Если не задан поисковый запрос и есть подписки
     Const(
         "<b>📖 Перед вами все имеющиеся подписки</b>\n",
@@ -48,20 +54,26 @@ deleting_window = Window(
             items="subscriptions",  # Список кортежей (id, tag)
             item_id_getter=lambda x: x[0],  # ID как callback_data
             id="select_subscriptions",
-            on_click=on_subscribing_deleted,
+            on_click=on_select_sub,
         ),
         width=2,
         height=10,
         id="scrolling_tags",
         when="subscriptions",  # Показывать, если есть подписки
     ),
-    Start(
-        Const("👈 Назад"),
-        id="restart",
-        state=DanMenu.main,
-        mode=StartMode.NORMAL,
+    Row(
+        Start(
+            Const("👈 Назад"),
+            id="back",
+            state=DanMenu.main,
+        ),
+        SwitchTo(
+            Const("❤️ Добавить подписку"),
+            id="add_sub",
+            state=DanMenu.add,
+        ),
     ),
     getter=get_subscribes,
-    state=DanMenu.delete,
+    state=DanMenu.sub_list,
     parse_mode=ParseMode.HTML,
 )
