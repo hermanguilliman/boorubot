@@ -9,13 +9,13 @@ async def on_popular_click(
     callback: CallbackQuery, button: Button, manager: DialogManager
 ):
     danbooru: DanbooruService = manager.middleware_data.get("danbooru")
+    await callback.answer("🚀 Получаем популярные посты")
     await danbooru.check_popular_posts()
-    await callback.answer("🚀 Получены популярные посты")
 
 
 async def on_hot_click(
     callback: CallbackQuery, button: Button, manager: DialogManager
 ):
     danbooru: DanbooruService = manager.middleware_data.get("danbooru")
+    await callback.answer("🌶 Получаем горячие посты")
     await danbooru.check_hot_posts()
-    await callback.answer("🌶 Получены горячие посты")

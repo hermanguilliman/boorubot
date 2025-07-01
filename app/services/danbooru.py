@@ -138,7 +138,7 @@ class DanbooruService:
                         parse_mode=ParseMode.HTML,
                     )
                     logger.debug(f"Неизвестный формат: {post.file_ext}")
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
             except TelegramBadRequest as e:
                 if (
                     post.preview_file_url
@@ -163,9 +163,7 @@ class DanbooruService:
                     f"{post.large_file_url}\n{caption}\n\n<b>Ошибка: {e}</b>",
                     parse_mode=ParseMode.HTML,
                 )
-            await asyncio.sleep(
-                0.5
-            )  # Задержка для соблюдения лимитов Telegram
+            await asyncio.sleep(0.2)
 
     async def _get_new_posts(
         self, subscriptions: List[str]
@@ -197,7 +195,7 @@ class DanbooruService:
     async def check_popular_posts(self) -> None:
         """Проверяет популярные посты и отправляет их."""
         logger.info("Проверка популярных постов")
-        posts = await self.api.get_popular_posts()
+        posts = await self.api.get_popular_posts(limit=20)
         if posts is None:  # Проверка на ошибку сервера
             logger.warning(
                 "Сервер Danbooru недоступен, пропускаем проверку популярных постов"
@@ -216,7 +214,7 @@ class DanbooruService:
     async def check_hot_posts(self) -> None:
         """Проверяет горячие посты и отправляет их."""
         logger.info("Проверка горячих постов")
-        posts = await self.api.get_hot_posts()
+        posts = await self.api.get_hot_posts(limit=20)
         if posts is None:  # Проверка на ошибку сервера
             logger.warning(
                 "Сервер Danbooru недоступен, пропускаем проверку горячих постов"
