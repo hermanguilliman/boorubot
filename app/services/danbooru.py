@@ -136,6 +136,7 @@ class DanbooruService:
                         self.admin_id,
                         f"{post.large_file_url}\n{caption}\n\n<b>Неподдерживаемый формат файла.</b>",
                         parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard,
                     )
                     logger.debug(f"Неизвестный формат: {post.file_ext}")
                 await asyncio.sleep(0.2)
@@ -150,18 +151,21 @@ class DanbooruService:
                         caption=f"{post.large_file_url}\n{caption}\n\n"
                         f"<b>Файл слишком большой: {post.file_size / 1_000_000:.2f} МБ</b>",
                         parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard,
                     )
                 else:
                     await self.telegram_bot.send_message(
                         self.admin_id,
                         f"{post.large_file_url}\n{caption}\n\n<b>Ошибка Telegram: {e}</b>",
                         parse_mode=ParseMode.HTML,
+                        reply_markup=keyboard,
                     )
             except Exception as e:
                 await self.telegram_bot.send_message(
                     self.admin_id,
                     f"{post.large_file_url}\n{caption}\n\n<b>Ошибка: {e}</b>",
                     parse_mode=ParseMode.HTML,
+                    reply_markup=keyboard,
                 )
             await asyncio.sleep(0.2)
 
