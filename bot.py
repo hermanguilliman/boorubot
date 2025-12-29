@@ -64,12 +64,8 @@ async def main():
     dp.include_router(dialog)
     setup_dialogs(dp)
     dp.update.middleware(RepoMiddleware(session_pool))
-    dp.update.middleware(
-        DanbooruMiddleware(
-            session_pool=session_pool, bot=bot, admin_id=int(admin_id)
-        )
-    )
-    dp.update.middleware(SchedulerMiddleware(scheduler))
+    dp.update.outer_middleware(DanbooruMiddleware(danbooru_service=danbooru))
+    dp.update.outer_middleware(SchedulerMiddleware(scheduler))
     dp.message.register(start, CommandStart(), AdminFilter(int(admin_id)))
 
     logger_setup()
@@ -81,8 +77,23 @@ async def main():
 
     logger.debug("boorubot 👻 запущен!")
     await bot(DeleteWebhook(drop_pending_updates=True))
-    await dp.start_polling(bot)
+
+    try:
+        await dp.start_polling(bot)
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.error(f"Произошла ошибка: {e}")
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+        await danbooru.close()
+        await bot.session.close()
+        logger.info("Бот остановлен, ресурсы освобождены")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot stopped!")
